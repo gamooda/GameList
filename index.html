@@ -1,749 +1,771 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Tracker — личный список пройденных игр</title>
-    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-        }
-        body {
-            background: #0f172a;
-            color: #e2e8f0;
-            min-height: 100vh;
-            padding: 2rem 1rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .app {
-            max-width: 1000px;
-            width: 100%;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #60a5fa, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .share-bar {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        .share-bar input {
-            padding: 0.6rem 1rem;
-            border-radius: 999px;
-            border: 1px solid #334155;
-            background: #1e293b;
-            color: #e2e8f0;
-            font-size: 0.9rem;
-            min-width: 260px;
-            outline: none;
-        }
-        .share-bar input:focus {
-            border-color: #60a5fa;
-        }
-        .btn {
-            padding: 0.6rem 1.2rem;
-            border-radius: 999px;
-            border: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: 0.2s;
-            background: #334155;
-            color: #e2e8f0;
-        }
-        .btn:hover {
-            background: #475569;
-        }
-        .btn-primary {
-            background: #3b82f6;
-            color: #fff;
-        }
-        .btn-primary:hover {
-            background: #2563eb;
-        }
-        .btn-success {
-            background: #10b981;
-            color: #fff;
-        }
-        .btn-success:hover {
-            background: #059669;
-        }
-        .search-section {
-            position: relative;
-            margin-bottom: 2rem;
-        }
-        .search-input {
-            width: 100%;
-            padding: 1rem 1.2rem;
-            border-radius: 16px;
-            border: 1px solid #334155;
-            background: #1e293b;
-            color: #e2e8f0;
-            font-size: 1rem;
-            outline: none;
-            transition: 0.2s;
-        }
-        .search-input:focus {
-            border-color: #60a5fa;
-            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
-        }
-        .suggestions {
-            position: absolute;
-            top: calc(100% + 8px);
-            left: 0;
-            right: 0;
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 16px;
-            max-height: 360px;
-            overflow-y: auto;
-            z-index: 10;
-            display: none;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-        }
-        .suggestions.active {
-            display: block;
-        }
-        .suggestion-item {
-            display: flex;
-            gap: 1rem;
-            padding: 0.8rem 1rem;
-            cursor: pointer;
-            border-bottom: 1px solid #334155;
-            align-items: center;
-            transition: 0.15s;
-        }
-        .suggestion-item:last-child {
-            border-bottom: none;
-        }
-        .suggestion-item:hover {
-            background: #334155;
-        }
-        .suggestion-item img {
-            width: 64px;
-            height: 64px;
-            border-radius: 10px;
-            object-fit: cover;
-            background: #0f172a;
-            flex-shrink: 0;
-        }
-        .suggestion-info {
-            flex: 1;
-            min-width: 0;
-        }
-        .suggestion-info h4 {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 0.2rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .suggestion-meta {
-            display: flex;
-            gap: 1rem;
-            font-size: 0.8rem;
-            color: #94a3b8;
-            flex-wrap: wrap;
-        }
-        .suggestion-meta span {
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
-        .game-list {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-        .game-card {
-            background: #1e293b;
-            border-radius: 20px;
-            padding: 1.5rem;
-            border: 1px solid #334155;
-            display: flex;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-            transition: 0.2s;
-        }
-        .game-card:hover {
-            border-color: #475569;
-        }
-        .game-cover {
-            width: 160px;
-            height: 160px;
-            border-radius: 14px;
-            object-fit: cover;
-            background: #0f172a;
-            flex-shrink: 0;
-        }
-        .game-body {
-            flex: 1;
-            min-width: 260px;
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-        }
-        .game-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-        .game-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-        }
-        .game-rating-badge {
-            background: #3b82f6;
-            color: #fff;
-            padding: 0.2rem 0.7rem;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        .game-meta {
-            display: flex;
-            gap: 1.2rem;
-            font-size: 0.85rem;
-            color: #94a3b8;
-            flex-wrap: wrap;
-        }
-        .game-meta span {
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
-        .user-controls {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-top: 0.3rem;
-        }
-        .user-score {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .user-score label {
-            font-size: 0.85rem;
-            color: #94a3b8;
-        }
-        .user-score input {
-            width: 70px;
-            padding: 0.4rem 0.6rem;
-            border-radius: 10px;
-            border: 1px solid #334155;
-            background: #0f172a;
-            color: #e2e8f0;
-            font-size: 0.9rem;
-            text-align: center;
-            outline: none;
-        }
-        .user-score input:focus {
-            border-color: #60a5fa;
-        }
-        .tags-section {
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-        }
-        .tags-label {
-            font-size: 0.8rem;
-            color: #94a3b8;
-        }
-        .tags-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-        }
-        .tag {
-            background: #334155;
-            padding: 0.2rem 0.7rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
-        .tag button {
-            background: none;
-            border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            font-size: 0.9rem;
-            padding: 0;
-            line-height: 1;
-        }
-        .tag button:hover {
-            color: #f87171;
-        }
-        .tag-input-row {
-            display: flex;
-            gap: 0.4rem;
-            flex-wrap: wrap;
-        }
-        .tag-input-row input {
-            padding: 0.35rem 0.7rem;
-            border-radius: 999px;
-            border: 1px solid #334155;
-            background: #0f172a;
-            color: #e2e8f0;
-            font-size: 0.8rem;
-            outline: none;
-            min-width: 140px;
-        }
-        .tag-input-row input:focus {
-            border-color: #60a5fa;
-        }
-        .tag-input-row button {
-            padding: 0.35rem 0.9rem;
-            border-radius: 999px;
-            border: none;
-            background: #3b82f6;
-            color: #fff;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .tag-input-row button:hover {
-            background: #2563eb;
-        }
-        .game-notes {
-            width: 100%;
-            padding: 0.7rem 1rem;
-            border-radius: 12px;
-            border: 1px solid #334155;
-            background: #0f172a;
-            color: #e2e8f0;
-            font-size: 0.9rem;
-            resize: vertical;
-            min-height: 60px;
-            outline: none;
-        }
-        .game-notes:focus {
-            border-color: #60a5fa;
-        }
-        .remove-btn {
-            align-self: flex-start;
-            background: transparent;
-            border: 1px solid #7f1d1d;
-            color: #f87171;
-            padding: 0.4rem 1rem;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .remove-btn:hover {
-            background: #7f1d1d;
-            color: #fff;
-        }
-        .empty-state {
-            text-align: center;
-            color: #64748b;
-            padding: 3rem 1rem;
-            font-size: 1.1rem;
-        }
-        .toast {
-            position: fixed;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #10b981;
-            color: #fff;
-            padding: 0.8rem 1.5rem;
-            border-radius: 999px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            z-index: 100;
-        }
-        .toast.show {
-            opacity: 1;
-        }
-        @media (max-width: 640px) {
-            .game-card {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-            }
-            .game-header {
-                flex-direction: column;
-                align-items: center;
-            }
-            .game-meta {
-                justify-content: center;
-            }
-            .user-controls {
-                justify-content: center;
-            }
-            .tags-list {
-                justify-content: center;
-            }
-            .tag-input-row {
-                justify-content: center;
-            }
-            .remove-btn {
-                align-self: center;
-            }
-            .share-bar input {
-                min-width: 180px;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+:root {
+    --bg: #0e0e10;
+    --panel: #1f1f23;
+    --border: #2d2d30;
+    --border-light: #3a3a3d;
+    --text: #efeff1;
+    --text-muted: #aaa;
+    --primary: #9147ff;
+    --primary-hover: #772ce8;
+    --danger: #ff4d4d;
+}
+body {
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+}
+.app {
+    max-width: 1000px;
+    width: 100%;
+}
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+h1 {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.share-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.share-bar input {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    min-width: 250px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.share-bar input:focus {
+    border-color: var(--primary);
+}
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    background: var(--panel);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn:hover {
+    background: #2a2a2e;
+    border-color: #666;
+    color: var(--text);
+}
+.btn-primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+.btn-primary:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    color: #fff;
+}
+.search-section {
+    position: relative;
+    margin-bottom: 24px;
+}
+.search-input {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.search-input:focus {
+    border-color: var(--primary);
+}
+.suggestions {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 10;
+    display: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+.suggestions.active {
+    display: block;
+}
+.suggestion-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    transition: background 0.15s;
+}
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+.suggestion-item:hover {
+    background: #2a2a2e;
+}
+.suggestion-item img {
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--bg);
+    flex-shrink: 0;
+}
+.suggestion-info {
+    flex: 1;
+    min-width: 0;
+}
+.suggestion-info h4 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+}
+.suggestion-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+}
+.game-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.game-card {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    transition: border-color 0.2s;
+}
+.game-card:hover {
+    border-color: var(--border-light);
+}
+.game-cover {
+    width: 140px;
+    height: 140px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--bg);
+    flex-shrink: 0;
+}
+.game-body {
+    flex: 1;
+    min-width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.game-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+}
+.game-rating-badge {
+    background: var(--primary);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.game-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+}
+.user-controls {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 4px;
+}
+.user-score {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.user-score label {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.user-score input {
+    width: 60px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-light);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    text-align: center;
+    outline: none;
+}
+.user-score input:focus {
+    border-color: var(--primary);
+}
+.tags-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.tags-label {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.tag {
+    background: #2a2a2e;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+}
+.tag button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    line-height: 1;
+}
+.tag button:hover {
+    color: var(--danger);
+}
+.tag-input-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.tag-input-row input {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-light);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 12px;
+    outline: none;
+    min-width: 120px;
+}
+.tag-input-row input:focus {
+    border-color: var(--primary);
+}
+.tag-input-row button {
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.tag-input-row button:hover {
+    background: var(--primary-hover);
+}
+.game-notes {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    resize: vertical;
+    min-height: 50px;
+    outline: none;
+}
+.game-notes:focus {
+    border-color: var(--primary);
+}
+.remove-btn {
+    align-self: flex-start;
+    background: transparent;
+    border: 1px solid var(--border-light);
+    color: var(--text-muted);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.remove-btn:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+.empty-state {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 48px 16px;
+    font-size: 15px;
+}
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel);
+    border: 1px solid var(--border-light);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 100;
+}
+.toast.show {
+    opacity: 1;
+}
+@media (max-width: 640px) {
+    .game-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .game-header {
+        flex-direction: column;
+        align-items: center;
+    }
+    .game-meta {
+        justify-content: center;
+    }
+    .user-controls {
+        justify-content: center;
+    }
+    .tags-list {
+        justify-content: center;
+    }
+    .tag-input-row {
+        justify-content: center;
+    }
+    .remove-btn {
+        align-self: center;
+    }
+    .share-bar input {
+        min-width: 180px;
+    }
+}
+</style>
 </head>
 <body>
-    <div class="app">
-        <header>
-            <h1>🎮 Game Tracker</h1>
-            <div class="share-bar">
-                <input type="text" id="shareLinkInput" placeholder="Ссылка для друга" readonly>
-                <button class="btn btn-primary" id="copyShareBtn">Копировать</button>
-                <button class="btn btn-success" id="generateShareBtn">Обновить ссылку</button>
-            </div>
-        </header>
-
-        <div class="search-section">
-            <input type="text" class="search-input" id="searchInput" placeholder="Начните вводить название игры..." autocomplete="off">
-            <div class="suggestions" id="suggestions"></div>
+<div class="app">
+    <header>
+        <h1>🎮 Game Tracker</h1>
+        <div class="share-bar">
+            <input type="text" id="shareLinkInput" placeholder="Ссылка для друга" readonly>
+            <button class="btn btn-primary" id="copyShareBtn">Копировать</button>
+            <button class="btn btn-primary" id="generateShareBtn">Обновить</button>
         </div>
+    </header>
 
-        <div class="game-list" id="gameList"></div>
-        <div class="empty-state" id="emptyState">Пока нет пройденных игр. Найдите игру через поиск выше.</div>
+    <div class="search-section">
+        <input type="text" class="search-input" id="searchInput" placeholder="Начните вводить название игры..." autocomplete="off">
+        <div class="suggestions" id="suggestions"></div>
     </div>
 
-    <div class="toast" id="toast">Ссылка скопирована!</div>
+    <div class="game-list" id="gameList"></div>
+    <div class="empty-state" id="emptyState">Пока нет пройденных игр. Найдите игру через поиск выше.</div>
+</div>
 
-    <script>
-        const RAWG_API_KEY = 'YOUR_RAWG_API_KEY';
-        const STORAGE_KEY = 'game_tracker_games';
+<div class="toast" id="toast">Ссылка скопирована!</div>
 
-        const searchInput = document.getElementById('searchInput');
-        const suggestionsBox = document.getElementById('suggestions');
-        const gameList = document.getElementById('gameList');
-        const emptyState = document.getElementById('emptyState');
-        const shareLinkInput = document.getElementById('shareLinkInput');
-        const copyShareBtn = document.getElementById('copyShareBtn');
-        const generateShareBtn = document.getElementById('generateShareBtn');
-        const toast = document.getElementById('toast');
+<script>
+const GAME_DATABASE = [
+    { id: 3498, name: "Grand Theft Auto V", background_image: "https://media.rawg.io/media/games/20a/20aa03a10cda45239fe22d035c0ebe64.jpg", rating: 4.47, playtime: 74, released: "2013-09-17" },
+    { id: 3328, name: "The Witcher 3: Wild Hunt", background_image: "https://media.rawg.io/media/games/618/618c2031a07bbff6b4f611f10b6bcdbc.jpg", rating: 4.66, playtime: 46, released: "2015-05-18" },
+    { id: 4200, name: "Portal 2", background_image: "https://media.rawg.io/media/games/328/3283617cb7d75d67257fc58339188742.jpg", rating: 4.61, playtime: 11, released: "2011-04-18" },
+    { id: 5286, name: "BioShock", background_image: "https://media.rawg.io/media/games/bc0/bc06a29ceac58652b684deefe7d56099.jpg", rating: 4.37, playtime: 14, released: "2007-08-21" },
+    { id: 13536, name: "Portal", background_image: "https://media.rawg.io/media/games/328/3283617cb7d75d67257fc58339188742.jpg", rating: 4.36, playtime: 4, released: "2007-10-09" },
+    { id: 12020, name: "Half-Life 2", background_image: "https://media.rawg.io/media/games/b8c/b8c243eaa43519f2e1a73f7e02a51b18.jpg", rating: 4.48, playtime: 12, released: "2004-11-16" },
+    { id: 58714, name: "Cyberpunk 2077", background_image: "https://media.rawg.io/media/games/26d/26d4437715bee60138dab4a7c8c59c92.jpg", rating: 4.12, playtime: 65, released: "2020-12-10" },
+    { id: 326243, name: "Elden Ring", background_image: "https://media.rawg.io/media/games/b29/b294fdd866dcdb86a8c8c0e4d4b5e3e6.jpg", rating: 4.75, playtime: 80, released: "2022-02-25" },
+    { id: 5679, name: "The Elder Scrolls V: Skyrim", background_image: "https://media.rawg.io/media/games/7cf/7cfc9220b401b7a300e409e539c9afd5.jpg", rating: 4.42, playtime: 60, released: "2011-11-11" },
+    { id: 3439, name: "Red Dead Redemption 2", background_image: "https://media.rawg.io/media/games/511/5118aff5091cb3efec399c808f8c598f.jpg", rating: 4.58, playtime: 85, released: "2018-10-26" },
+    { id: 41494, name: "God of War", background_image: "https://media.rawg.io/media/games/4be/4be6a6ad0364751a96229c56bf69be59.jpg", rating: 4.59, playtime: 30, released: "2018-04-20" },
+    { id: 39761, name: "Dark Souls III", background_image: "https://media.rawg.io/media/games/582/582b0e805340ea1e5c71e01d4291f99c.jpg", rating: 4.47, playtime: 40, released: "2016-03-24" },
+    { id: 278, name: "The Witcher 2: Assassins of Kings", background_image: "https://media.rawg.io/media/games/8bd/8bda6dce51b1f3b7b4b0e5e3d3e3d3e3.jpg", rating: 4.29, playtime: 25, released: "2011-05-16" },
+    { id: 9882, name: "Mass Effect 2", background_image: "https://media.rawg.io/media/games/67f/67f62d1f062a6164f57575e0604ee9f6.jpg", rating: 4.55, playtime: 30, released: "2010-01-26" },
+    { id: 23037, name: "Bloodborne", background_image: "https://media.rawg.io/media/games/2c2/2c2a2d4b4e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.65, playtime: 45, released: "2015-03-24" },
+    { id: 10213, name: "Batman: Arkham City", background_image: "https://media.rawg.io/media/games/6e0/6e0d3c2d4e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.48, playtime: 25, released: "2011-10-18" },
+    { id: 4286, name: "Hollow Knight", background_image: "https://media.rawg.io/media/games/4cf/4cfc6b7f1850590a4634b08bfab308ab.jpg", rating: 4.65, playtime: 25, released: "2017-02-24" },
+    { id: 274, name: "Dishonored", background_image: "https://media.rawg.io/media/games/4e6/4e6e8e1e5e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.32, playtime: 12, released: "2012-10-09" },
+    { id: 3070, name: "Fallout: New Vegas", background_image: "https://media.rawg.io/media/games/99b/99bf4b4f1d3d3d3d3d3d3d3d3d3d3d3d.jpg", rating: 4.49, playtime: 50, released: "2010-10-19" },
+    { id: 11910, name: "Hades", background_image: "https://media.rawg.io/media/games/1f4/1f4d2e7e5e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.64, playtime: 20, released: "2020-09-17" },
+    { id: 12210, name: "The Last of Us", background_image: "https://media.rawg.io/media/games/2f8/2f8c7a8b7b7b7b7b7b7b7b7b7b7b7b7b.jpg", rating: 4.62, playtime: 15, released: "2013-06-14" },
+    { id: 4301, name: "Doom (2016)", background_image: "https://media.rawg.io/media/games/4e6/4e6e5e5e5e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.44, playtime: 12, released: "2016-05-13" },
+    { id: 2850, name: "Sekiro: Shadows Die Twice", background_image: "https://media.rawg.io/media/games/69f/69f5b3e5e5e5e5e5e5e5e5e5e5e5e5e5.jpg", rating: 4.63, playtime: 30, released: "2019-03-22" },
+    { id: 10243, name: "Dark Souls", background_image: "https://media.rawg.io/media/games/5e5/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.45, playtime: 35, released: "2011-09-22" }
+];
 
-        let games = [];
-        let debounceTimer = null;
+const STORAGE_KEY = 'game_tracker_games_v2';
+const searchInput = document.getElementById('searchInput');
+const suggestionsBox = document.getElementById('suggestions');
+const gameList = document.getElementById('gameList');
+const emptyState = document.getElementById('emptyState');
+const shareLinkInput = document.getElementById('shareLinkInput');
+const copyShareBtn = document.getElementById('copyShareBtn');
+const generateShareBtn = document.getElementById('generateShareBtn');
+const toast = document.getElementById('toast');
 
-        function loadGames() {
-            try {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    games = JSON.parse(saved);
-                }
-            } catch (e) {
-                games = [];
-            }
+let games = [];
+let debounceTimer = null;
+
+function loadGames() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            games = JSON.parse(saved);
         }
+    } catch (e) {
+        games = [];
+    }
+}
 
-        function saveGames() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
-        }
+function saveGames() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+}
 
-        function showToast(message) {
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2000);
-        }
+function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+}
 
-        function renderGames() {
-            if (games.length === 0) {
-                gameList.innerHTML = '';
-                emptyState.style.display = 'block';
-                return;
-            }
-            emptyState.style.display = 'none';
-            gameList.innerHTML = games.map((game, index) => {
-                const tagsHtml = game.tags.map((tag, tagIndex) => `
-                    <span class="tag">${escapeHtml(tag)}<button data-game-index="${index}" data-tag-index="${tagIndex}" class="remove-tag">×</button></span>
-                `).join('');
-                return `
-                    <div class="game-card" data-game-index="${index}">
-                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/160x160/1e293b/64748b?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy">
-                        <div class="game-body">
-                            <div class="game-header">
-                                <div class="game-title">${escapeHtml(game.name)}</div>
-                                <div class="game-rating-badge">⭐ ${game.rating || '—'} / 10</div>
-                            </div>
-                            <div class="game-meta">
-                                <span>⏱ ${game.playtime ? game.playtime + ' ч' : '—'}</span>
-                                <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
-                            </div>
-                            <div class="user-controls">
-                                <div class="user-score">
-                                    <label>Моя оценка:</label>
-                                    <input type="number" min="1" max="10" value="${game.userRating || ''}" placeholder="1-10" data-game-index="${index}" class="user-rating-input">
-                                </div>
-                            </div>
-                            <div class="tags-section">
-                                <div class="tags-label">Теги:</div>
-                                <div class="tags-list" id="tags-list-${index}">${tagsHtml}</div>
-                                <div class="tag-input-row">
-                                    <input type="text" placeholder="Добавить тег..." id="tag-input-${index}" data-game-index="${index}">
-                                    <button data-game-index="${index}" class="add-tag-btn">+</button>
-                                </div>
-                            </div>
-                            <textarea class="game-notes" placeholder="Что понравилось, краткое описание..." data-game-index="${index}">${escapeHtml(game.notes || '')}</textarea>
-                            <button class="remove-btn" data-game-index="${index}">Удалить игру</button>
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function renderGames() {
+    if (games.length === 0) {
+        gameList.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    emptyState.style.display = 'none';
+    gameList.innerHTML = games.map((game, index) => {
+        const tagsHtml = (game.tags || []).map((tag, tagIndex) => `
+            <span class="tag">${escapeHtml(tag)}<button data-game-index="${index}" data-tag-index="${tagIndex}" class="remove-tag">×</button></span>
+        `).join('');
+        return `
+            <div class="game-card" data-game-index="${index}">
+                <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/140x140/1f1f23/efeff1?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy">
+                <div class="game-body">
+                    <div class="game-header">
+                        <div class="game-title">${escapeHtml(game.name)}</div>
+                        <div class="game-rating-badge">⭐ ${game.rating || '—'} / 10</div>
+                    </div>
+                    <div class="game-meta">
+                        <span>⏱ ${game.playtime ? game.playtime + ' ч' : '—'}</span>
+                        <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
+                    </div>
+                    <div class="user-controls">
+                        <div class="user-score">
+                            <label>Моя оценка:</label>
+                            <input type="number" min="1" max="10" value="${game.userRating || ''}" placeholder="1-10" data-game-index="${index}" class="user-rating-input">
                         </div>
                     </div>
-                `;
-            }).join('');
-        }
+                    <div class="tags-section">
+                        <div class="tags-label">Теги:</div>
+                        <div class="tags-list" id="tags-list-${index}">${tagsHtml}</div>
+                        <div class="tag-input-row">
+                            <input type="text" placeholder="Добавить тег..." id="tag-input-${index}" data-game-index="${index}">
+                            <button data-game-index="${index}" class="add-tag-btn">+</button>
+                        </div>
+                    </div>
+                    <textarea class="game-notes" placeholder="Что понравилось, краткое описание..." data-game-index="${index}">${escapeHtml(game.notes || '')}</textarea>
+                    <button class="remove-btn" data-game-index="${index}">Удалить игру</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+function addGameFromSearch(gameData) {
+    const exists = games.some(g => g.id === gameData.id);
+    if (exists) {
+        showToast('Эта игра уже добавлена');
+        return;
+    }
+    games.push({
+        id: gameData.id,
+        name: gameData.name,
+        background_image: gameData.background_image,
+        rating: gameData.rating,
+        playtime: gameData.playtime,
+        released: gameData.released,
+        userRating: null,
+        tags: [],
+        notes: ''
+    });
+    saveGames();
+    renderGames();
+    searchInput.value = '';
+    suggestionsBox.classList.remove('active');
+    suggestionsBox.innerHTML = '';
+    showToast('Игра добавлена');
+}
 
-        function addGameFromSearch(gameData) {
-            const exists = games.some(g => g.id === gameData.id);
-            if (exists) {
-                showToast('Эта игра уже добавлена');
-                return;
-            }
-            games.push({
-                id: gameData.id,
-                name: gameData.name,
-                background_image: gameData.background_image,
-                rating: gameData.rating,
-                playtime: gameData.playtime,
-                released: gameData.released,
-                userRating: null,
-                tags: [],
-                notes: ''
-            });
+function searchLocalGames(query) {
+    if (!query.trim()) {
+        suggestionsBox.classList.remove('active');
+        suggestionsBox.innerHTML = '';
+        return;
+    }
+    const filtered = GAME_DATABASE.filter(g => g.name.toLowerCase().includes(query.toLowerCase())).slice(0, 6);
+    
+    if (filtered.length === 0) {
+        suggestionsBox.innerHTML = '<div style="padding:16px;color:var(--text-muted);text-align:center;">Ничего не найдено</div>';
+        suggestionsBox.classList.add('active');
+        return;
+    }
+    
+    suggestionsBox.innerHTML = filtered.map(game => `
+        <div class="suggestion-item" data-game='${JSON.stringify({
+            id: game.id,
+            name: game.name,
+            background_image: game.background_image,
+            rating: game.rating,
+            playtime: game.playtime,
+            released: game.released
+        }).replace(/'/g, "&#39;")}'>
+            <img src="${game.background_image || 'https://via.placeholder.com/56x56/1f1f23/efeff1?text=?'}" alt="${escapeHtml(game.name)}">
+            <div class="suggestion-info">
+                <h4>${escapeHtml(game.name)}</h4>
+                <div class="suggestion-meta">
+                    <span>⭐ ${game.rating || '—'}</span>
+                    <span>⏱ ${game.playtime ? game.playtime + ' ч' : '—'}</span>
+                    <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    suggestionsBox.classList.add('active');
+}
+
+function generateShareLink() {
+    if (games.length === 0) {
+        shareLinkInput.value = '';
+        showToast('Список пуст');
+        return;
+    }
+    const data = games.map(g => ({
+        id: g.id,
+        name: g.name,
+        background_image: g.background_image,
+        rating: g.rating,
+        playtime: g.playtime,
+        released: g.released,
+        userRating: g.userRating,
+        tags: g.tags,
+        notes: g.notes
+    }));
+    const json = JSON.stringify(data);
+    const compressed = LZString.compressToEncodedURIComponent(json);
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}#data=${compressed}`;
+    shareLinkInput.value = shareUrl;
+}
+
+function loadFromHash() {
+    const hash = window.location.hash;
+    if (!hash || !hash.startsWith('#data=')) return;
+    const compressed = hash.slice(6);
+    try {
+        const json = LZString.decompressFromEncodedURIComponent(compressed);
+        if (!json) return;
+        const data = JSON.parse(json);
+        if (Array.isArray(data) && data.length > 0) {
+            games = data;
             saveGames();
             renderGames();
-            searchInput.value = '';
-            suggestionsBox.classList.remove('active');
-            suggestionsBox.innerHTML = '';
-            showToast('Игра добавлена');
+            showToast('Список загружен по ссылке');
         }
+    } catch (e) {}
+}
 
-        function fetchGames(query) {
-            if (!query.trim()) {
-                suggestionsBox.classList.remove('active');
-                suggestionsBox.innerHTML = '';
-                return;
-            }
-            fetch(`https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(query)}&page_size=6`)
-                .then(res => {
-                    if (!res.ok) throw new Error('API error');
-                    return res.json();
-                })
-                .then(data => {
-                    if (!data.results || data.results.length === 0) {
-                        suggestionsBox.innerHTML = '<div style="padding:1rem;color:#64748b;text-align:center;">Ничего не найдено</div>';
-                        suggestionsBox.classList.add('active');
-                        return;
-                    }
-                    suggestionsBox.innerHTML = data.results.map(game => `
-                        <div class="suggestion-item" data-game='${JSON.stringify({
-                            id: game.id,
-                            name: game.name,
-                            background_image: game.background_image,
-                            rating: game.rating,
-                            playtime: game.playtime,
-                            released: game.released
-                        }).replace(/'/g, "&#39;")}'>
-                            <img src="${game.background_image || 'https://via.placeholder.com/64x64/1e293b/64748b?text=?'}" alt="${escapeHtml(game.name)}">
-                            <div class="suggestion-info">
-                                <h4>${escapeHtml(game.name)}</h4>
-                                <div class="suggestion-meta">
-                                    <span>⭐ ${game.rating || '—'}</span>
-                                    <span>⏱ ${game.playtime ? game.playtime + ' ч' : '—'}</span>
-                                    <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                    suggestionsBox.classList.add('active');
-                })
-                .catch(() => {
-                    suggestionsBox.innerHTML = '<div style="padding:1rem;color:#f87171;text-align:center;">Ошибка загрузки. Проверьте API-ключ.</div>';
-                    suggestionsBox.classList.add('active');
-                });
-        }
+searchInput.addEventListener('input', function () {
+    clearTimeout(debounceTimer);
+    const query = this.value;
+    debounceTimer = setTimeout(() => searchLocalGames(query), 200);
+});
 
-        function generateShareLink() {
-            if (games.length === 0) {
-                shareLinkInput.value = '';
-                showToast('Список пуст');
-                return;
-            }
-            const data = games.map(g => ({
-                id: g.id,
-                name: g.name,
-                background_image: g.background_image,
-                rating: g.rating,
-                playtime: g.playtime,
-                released: g.released,
-                userRating: g.userRating,
-                tags: g.tags,
-                notes: g.notes
-            }));
-            const json = JSON.stringify(data);
-            const compressed = LZString.compressToEncodedURIComponent(json);
-            const baseUrl = window.location.origin + window.location.pathname;
-            const shareUrl = `${baseUrl}#data=${compressed}`;
-            shareLinkInput.value = shareUrl;
-        }
+suggestionsBox.addEventListener('click', function (e) {
+    const item = e.target.closest('.suggestion-item');
+    if (!item) return;
+    const gameData = JSON.parse(item.dataset.game);
+    addGameFromSearch(gameData);
+});
 
-        function loadFromHash() {
-            const hash = window.location.hash;
-            if (!hash || !hash.startsWith('#data=')) return;
-            const compressed = hash.slice(6);
-            try {
-                const json = LZString.decompressFromEncodedURIComponent(compressed);
-                if (!json) return;
-                const data = JSON.parse(json);
-                if (Array.isArray(data) && data.length > 0) {
-                    games = data;
-                    saveGames();
-                    renderGames();
-                    showToast('Список загружен по ссылке');
-                }
-            } catch (e) {}
-        }
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('.search-section')) {
+        suggestionsBox.classList.remove('active');
+    }
+});
 
-        searchInput.addEventListener('input', function () {
-            clearTimeout(debounceTimer);
-            const query = this.value;
-            debounceTimer = setTimeout(() => fetchGames(query), 350);
-        });
-
-        suggestionsBox.addEventListener('click', function (e) {
-            const item = e.target.closest('.suggestion-item');
-            if (!item) return;
-            const gameData = JSON.parse(item.dataset.game);
-            addGameFromSearch(gameData);
-        });
-
-        document.addEventListener('click', function (e) {
-            if (!e.target.closest('.search-section')) {
-                suggestionsBox.classList.remove('active');
-            }
-        });
-
-        gameList.addEventListener('click', function (e) {
-            if (e.target.classList.contains('remove-btn')) {
-                const index = parseInt(e.target.dataset.gameIndex);
-                games.splice(index, 1);
-                saveGames();
-                renderGames();
-                showToast('Игра удалена');
-                return;
-            }
-            if (e.target.classList.contains('remove-tag')) {
-                const gameIndex = parseInt(e.target.dataset.gameIndex);
-                const tagIndex = parseInt(e.target.dataset.tagIndex);
-                games[gameIndex].tags.splice(tagIndex, 1);
-                saveGames();
-                renderGames();
-                return;
-            }
-            if (e.target.classList.contains('add-tag-btn')) {
-                const gameIndex = parseInt(e.target.dataset.gameIndex);
-                const input = document.getElementById(`tag-input-${gameIndex}`);
-                const tag = input.value.trim();
-                if (tag && !games[gameIndex].tags.includes(tag)) {
-                    games[gameIndex].tags.push(tag);
-                    saveGames();
-                    renderGames();
-                }
-                input.value = '';
-                return;
-            }
-        });
-
-        gameList.addEventListener('input', function (e) {
-            if (e.target.classList.contains('user-rating-input')) {
-                const index = parseInt(e.target.dataset.gameIndex);
-                let val = parseInt(e.target.value);
-                if (isNaN(val) || val < 1) val = null;
-                if (val > 10) val = 10;
-                games[index].userRating = val;
-                saveGames();
-            }
-            if (e.target.classList.contains('game-notes')) {
-                const index = parseInt(e.target.dataset.gameIndex);
-                games[index].notes = e.target.value;
-                saveGames();
-            }
-        });
-
-        gameList.addEventListener('keydown', function (e) {
-            if (e.target.classList.contains('tag-input-row') || e.target.closest('.tag-input-row')) {
-                if (e.key === 'Enter') {
-                    const input = e.target.closest('.tag-input-row').querySelector('input');
-                    const gameIndex = parseInt(input.dataset.gameIndex);
-                    const tag = input.value.trim();
-                    if (tag && !games[gameIndex].tags.includes(tag)) {
-                        games[gameIndex].tags.push(tag);
-                        saveGames();
-                        renderGames();
-                    }
-                    input.value = '';
-                    e.preventDefault();
-                }
-            }
-        });
-
-        copyShareBtn.addEventListener('click', function () {
-            if (!shareLinkInput.value) {
-                generateShareLink();
-            }
-            shareLinkInput.select();
-            document.execCommand('copy');
-            showToast('Ссылка скопирована!');
-        });
-
-        generateShareBtn.addEventListener('click', function () {
-            generateShareLink();
-            showToast('Ссылка обновлена');
-        });
-
-        window.addEventListener('hashchange', loadFromHash);
-
-        loadGames();
-        loadFromHash();
+gameList.addEventListener('click', function (e) {
+    if (e.target.classList.contains('remove-btn')) {
+        const index = parseInt(e.target.dataset.gameIndex);
+        games.splice(index, 1);
+        saveGames();
         renderGames();
+        showToast('Игра удалена');
+        return;
+    }
+    if (e.target.classList.contains('remove-tag')) {
+        const gameIndex = parseInt(e.target.dataset.gameIndex);
+        const tagIndex = parseInt(e.target.dataset.tagIndex);
+        games[gameIndex].tags.splice(tagIndex, 1);
+        saveGames();
+        renderGames();
+        return;
+    }
+    if (e.target.classList.contains('add-tag-btn')) {
+        const gameIndex = parseInt(e.target.dataset.gameIndex);
+        const input = document.getElementById(`tag-input-${gameIndex}`);
+        const tag = input.value.trim();
+        if (tag && !games[gameIndex].tags.includes(tag)) {
+            games[gameIndex].tags.push(tag);
+            saveGames();
+            renderGames();
+        }
+        input.value = '';
+        return;
+    }
+});
+
+gameList.addEventListener('input', function (e) {
+    if (e.target.classList.contains('user-rating-input')) {
+        const index = parseInt(e.target.dataset.gameIndex);
+        let val = parseInt(e.target.value);
+        if (isNaN(val) || val < 1) val = null;
+        if (val > 10) val = 10;
+        games[index].userRating = val;
+        saveGames();
+    }
+    if (e.target.classList.contains('game-notes')) {
+        const index = parseInt(e.target.dataset.gameIndex);
+        games[index].notes = e.target.value;
+        saveGames();
+    }
+});
+
+gameList.addEventListener('keydown', function (e) {
+    if (e.target.classList.contains('tag-input-row') || e.target.closest('.tag-input-row')) {
+        if (e.key === 'Enter') {
+            const input = e.target.closest('.tag-input-row').querySelector('input');
+            const gameIndex = parseInt(input.dataset.gameIndex);
+            const tag = input.value.trim();
+            if (tag && !games[gameIndex].tags.includes(tag)) {
+                games[gameIndex].tags.push(tag);
+                saveGames();
+                renderGames();
+            }
+            input.value = '';
+            e.preventDefault();
+        }
+    }
+});
+
+copyShareBtn.addEventListener('click', function () {
+    if (!shareLinkInput.value) {
         generateShareLink();
-    </script>
+    }
+    shareLinkInput.select();
+    document.execCommand('copy');
+    showToast('Ссылка скопирована!');
+});
+
+generateShareBtn.addEventListener('click', function () {
+    generateShareLink();
+    showToast('Ссылка обновлена');
+});
+
+window.addEventListener('hashchange', loadFromHash);
+
+loadGames();
+loadFromHash();
+renderGames();
+generateShareLink();
+</script>
 </body>
 </html>

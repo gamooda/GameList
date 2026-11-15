@@ -57,7 +57,8 @@ html {
     scrollbar-gutter: stable;
 }
 body {
-    background: var(--bg);
+    background: radial-gradient(circle at 50% 0%, #1c1c26 0%, #0f0f13 70%);
+    background-attachment: fixed;
     color: var(--text);
     min-height: 100vh;
     display: flex;
@@ -97,7 +98,7 @@ h1 {
     padding: 8px 12px;
     border-radius: 6px;
     border: 1px solid var(--border-light);
-    background: var(--bg);
+    background: rgba(0,0,0,0.3);
     color: var(--text);
     font-size: 13px;
     flex: 1;
@@ -152,7 +153,7 @@ h1 {
     padding: 12px 16px;
     border-radius: 8px;
     border: 1px solid var(--border);
-    background: var(--panel);
+    background: rgba(24, 24, 31, 0.8);
     color: var(--text);
     font-size: 15px;
     outline: none;
@@ -524,6 +525,7 @@ h1 {
     font-size: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
+    user-select: none;
 }
 .tag-chip:hover {
     background: rgba(255,255,255,0.1);
@@ -535,6 +537,41 @@ h1 {
     color: #fff;
     box-shadow: 0 2px 5px rgba(124, 58, 237, 0.3);
 }
+
+.custom-tag-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+}
+.custom-tag-row input {
+    flex: 1;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border-light);
+    background: rgba(0,0,0,0.3);
+    color: var(--text);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+.custom-tag-row input:focus {
+    border-color: var(--primary);
+}
+.custom-tag-row button {
+    padding: 0 16px;
+    border-radius: 20px;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+.custom-tag-row button:hover {
+    background: var(--primary-hover);
+}
+
 .game-notes {
     width: 100%;
     padding: 12px;
@@ -585,6 +622,40 @@ h1 {
 }
 .toast.show {
     opacity: 1;
+}
+
+/* Scroll to top button */
+.scroll-top-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--primary-grad);
+    color: white;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 5000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.scroll-top-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+.scroll-top-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.6);
+}
+.scroll-top-btn:active {
+    transform: translateY(0);
 }
 
 /* Lightbox */
@@ -697,6 +768,13 @@ h1 {
         right: 15px;
         padding: 4px 10px;
     }
+    .scroll-top-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
 }
 </style>
 </head>
@@ -705,7 +783,7 @@ h1 {
     <header>
         <h1>🎮 Game Tracker</h1>
         <div class="share-bar">
-            <input type="text" id="shareLinkInput" placeholder="Ссылка для друга" readonly>
+            <input type="text" id="shareLinkInput" placeholder="Поделиться списком" readonly>
             <button class="btn btn-primary" id="copyShareBtn">Копировать</button>
         </div>
     </header>
@@ -718,6 +796,8 @@ h1 {
     <div class="game-list" id="gameList"></div>
     <div class="empty-state" id="emptyState">Пока нет пройденных игр. Найдите игру через поиск выше.</div>
 </div>
+
+<button class="scroll-top-btn" id="scrollToTopBtn" title="Наверх">↑</button>
 
 <div class="modal" id="editModal">
     <div class="modal-bg" id="modalBg"></div>
@@ -750,7 +830,7 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v15';
+const STORAGE_KEY = 'game_tracker_games_v16';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
@@ -761,6 +841,7 @@ const toast = document.getElementById('toast');
 const editModal = document.getElementById('editModal');
 const modalBg = document.getElementById('modalBg');
 const modalContent = document.getElementById('modalContent');
+const scrollToTopBtn = document.getElementById('scrollToTopBtn');
 const lightbox = document.getElementById('lightbox');
 const lightboxCard = document.getElementById('lightboxCard');
 const lightboxImgFront = document.getElementById('lightboxImgFront');
@@ -770,6 +851,8 @@ const closeLightbox = document.getElementById('closeLightbox');
 let games = [];
 let debounceTimer = null;
 let editingGameIndex = null;
+let deleteTimer = null;
+let isDeleting = false;
 
 let isDragging = false;
 let hasDragged = false;
@@ -891,13 +974,15 @@ function renderEditModal() {
     if (editingGameIndex === null) return;
     const game = games[editingGameIndex];
     
+    const allTags = [...new Set([...PRESET_TAGS, ...(game.tags || [])])];
+    
     const ratingButtons = Array.from({length: 10}, (_, i) => {
         const val = i + 1;
         const isActive = game.userRating === val;
         return `<button class="rating-btn ${isActive ? 'active' : ''}" style="background: ${RATING_COLORS[val]}" data-val="${val}">${val}</button>`;
     }).join('');
     
-    const tagChips = PRESET_TAGS.map(tag => {
+    const tagChips = allTags.map(tag => {
         const isSelected = game.tags && game.tags.includes(tag);
         return `<div class="tag-chip ${isSelected ? 'selected' : ''}" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</div>`;
     }).join('');
@@ -932,6 +1017,10 @@ function renderEditModal() {
             <div class="edit-section">
                 <div class="edit-label">Теги:</div>
                 <div class="tags-picker" id="modalTagsPicker">${tagChips}</div>
+                <div class="custom-tag-row">
+                    <input type="text" id="customTagInput" placeholder="Свой тег..." maxlength="20">
+                    <button id="addCustomTagBtn" type="button">+</button>
+                </div>
             </div>
             
             <textarea class="game-notes" id="modalNotesInput" rows="3" placeholder="Что понравилось, краткое описание...">${escapeHtml(game.notes || '')}</textarea>
@@ -942,6 +1031,20 @@ function renderEditModal() {
             </div>
         </div>
     `;
+    
+    resetDeleteState();
+}
+
+function resetDeleteState() {
+    if (deleteTimer) clearInterval(deleteTimer);
+    isDeleting = false;
+    const btn = document.getElementById('modalDeleteBtn');
+    if (btn) {
+        btn.textContent = 'Удалить';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+    }
 }
 
 function openEditModal(index) {
@@ -954,6 +1057,7 @@ function openEditModal(index) {
 function closeEditModal() {
     editModal.classList.remove('active');
     document.body.style.overflow = '';
+    resetDeleteState();
     editingGameIndex = null;
 }
 
@@ -1082,6 +1186,18 @@ function loadFromHash() {
     }
 }
 
+window.addEventListener('scroll', () => {
+    if (window.scrollY > 300) {
+        scrollToTopBtn.classList.add('visible');
+    } else {
+        scrollToTopBtn.classList.remove('visible');
+    }
+});
+
+scrollToTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
 gameList.addEventListener('mousemove', function(e) {
     const cover = e.target.closest('.game-cover');
     if (!cover) return;
@@ -1170,11 +1286,58 @@ modalContent.addEventListener('click', function (e) {
     }
 
     if (target.id === 'modalDeleteBtn') {
-        games.splice(editingGameIndex, 1);
-        saveGames();
-        renderGames();
-        closeEditModal();
-        showToast('Игра удалена');
+        const btn = document.getElementById('modalDeleteBtn');
+        if (isDeleting) {
+            // Второй клик - удаляем
+            games.splice(editingGameIndex, 1);
+            saveGames();
+            renderGames();
+            closeEditModal();
+            showToast('Игра удалена');
+            return;
+        }
+
+        // Первый клик - запускаем таймер
+        isDeleting = true;
+        let sec = 5;
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+        btn.textContent = `Ждите (${sec})`;
+
+        deleteTimer = setInterval(() => {
+            sec--;
+            if (sec > 0) {
+                btn.textContent = `Ждите (${sec})`;
+            } else {
+                clearInterval(deleteTimer);
+                btn.textContent = 'Удалить окончательно';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            }
+        }, 1000);
+        return;
+    }
+
+    if (target.id === 'addCustomTagBtn') {
+        const input = document.getElementById('customTagInput');
+        const tag = input.value.trim();
+        if (tag) {
+            if (!game.tags) game.tags = [];
+            if (!game.tags.includes(tag)) {
+                game.tags.push(tag);
+                saveGames();
+                renderEditModal();
+                setTimeout(() => {
+                    const newInput = document.getElementById('customTagInput');
+                    if (newInput) newInput.focus();
+                }, 10);
+            } else {
+                showToast('Такой тег уже есть');
+            }
+            input.value = '';
+        }
         return;
     }
 
@@ -1206,6 +1369,13 @@ modalContent.addEventListener('click', function (e) {
         }
         saveGames();
         return;
+    }
+});
+
+modalContent.addEventListener('keydown', function(e) {
+    if (e.target.id === 'customTagInput' && e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('addCustomTagBtn').click();
     }
 });
 

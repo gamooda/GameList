@@ -31,6 +31,15 @@
 input, textarea {
     user-select: text;
 }
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+    -webkit-appearance: none; 
+    margin: 0; 
+}
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
 :root {
     --bg: #0f0f13;
     --panel: #18181f;
@@ -216,19 +225,34 @@ h1 {
 .game-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 .game-card {
     background: var(--panel);
-    border-radius: 8px;
-    padding: 8px 12px;
+    border-radius: 6px;
+    padding: 6px 10px;
     border: 1px solid var(--border);
     display: flex;
-    gap: 12px;
+    gap: 10px;
     align-items: center;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
     z-index: 1;
+}
+.game-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 8px;
+    background: var(--card-bg, transparent);
+    filter: blur(12px);
+    opacity: 0.15;
+    z-index: -1;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.game-card:hover::before {
+    opacity: 0.4;
 }
 .game-card:hover {
     border-color: var(--border-light);
@@ -236,15 +260,18 @@ h1 {
 }
 .game-card.edit-mode {
     border-color: var(--primary);
-    padding: 16px;
-    gap: 16px;
+    padding: 12px;
+    gap: 12px;
     background: #1a1a22;
     box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     align-items: flex-start;
     z-index: 5;
 }
+.game-card.edit-mode::before {
+    display: none;
+}
 .cover-wrapper {
-    width: 64px;
+    width: 48px;
     height: 64px;
     flex-shrink: 0;
     perspective: 600px;
@@ -268,8 +295,8 @@ h1 {
     box-shadow: 0 15px 30px rgba(0,0,0,0.8);
 }
 .game-card.edit-mode .cover-wrapper {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 110px;
     pointer-events: none;
 }
 .game-card.edit-mode .game-cover {
@@ -281,21 +308,21 @@ h1 {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     transition: all 0.3s ease;
 }
 .game-card.edit-mode .game-body {
-    gap: 12px;
+    gap: 8px;
 }
 .game-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
 }
 .game-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--text);
     white-space: nowrap;
@@ -304,7 +331,7 @@ h1 {
     transition: font-size 0.3s ease;
 }
 .game-card.edit-mode .game-title {
-    font-size: 18px;
+    font-size: 16px;
     white-space: normal;
 }
 .badges-row {
@@ -316,18 +343,18 @@ h1 {
 .game-rating-badge {
     background: #2a2a35;
     color: #e0e0e0;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 11px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10px;
     font-weight: 600;
     white-space: nowrap;
     border: 1px solid #3f3f4a;
 }
 .user-rating-badge {
     color: #fff;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 11px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10px;
     font-weight: 700;
     white-space: nowrap;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
@@ -335,8 +362,8 @@ h1 {
 .game-meta {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 11px;
+    gap: 8px;
+    font-size: 10px;
     color: var(--text-muted);
     flex-wrap: wrap;
 }
@@ -344,41 +371,41 @@ h1 {
     color: #34d399;
     font-weight: 600;
     background: rgba(16, 185, 129, 0.1);
-    padding: 1px 4px;
-    border-radius: 3px;
+    padding: 1px 3px;
+    border-radius: 2px;
 }
 .game-tags-view {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 3px;
     align-items: center;
 }
 .game-tag-view {
     background: #23232b;
-    padding: 1px 5px;
+    padding: 0px 4px;
     border-radius: 3px;
-    font-size: 10px;
+    font-size: 9px;
     color: #b0b0c0;
     border: 1px solid #2d2d38;
     white-space: nowrap;
 }
 .game-notes-preview {
-    font-size: 11px;
+    font-size: 10px;
     color: #8a8a9d;
     font-style: italic;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-    margin-top: 2px;
+    margin-top: 1px;
 }
 .action-btn {
     background: transparent;
     border: 1px solid var(--border-light);
     color: var(--text-muted);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -400,41 +427,54 @@ h1 {
 }
 .edit-row {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     flex-wrap: wrap;
     align-items: flex-end;
 }
 .edit-label {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-muted);
     font-weight: 600;
 }
-.user-playtime-input {
-    width: 80px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    border: 1px solid var(--border-light);
+.user-playtime-input-wrapper {
+    display: flex;
+    align-items: center;
     background: var(--bg);
-    color: var(--text);
-    font-size: 13px;
-    outline: none;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    padding: 0 8px;
+    height: 24px;
     transition: border-color 0.2s;
 }
-.user-playtime-input:focus {
+.user-playtime-input-wrapper:focus-within {
     border-color: var(--primary);
+}
+.user-playtime-input {
+    width: 40px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 12px;
+    outline: none;
+    text-align: center;
+}
+.user-playtime-input-wrapper span {
+    color: var(--text-muted);
+    font-size: 11px;
+    margin-left: 2px;
 }
 .rating-picker {
     display: flex;
-    gap: 4px;
+    gap: 3px;
     flex-wrap: wrap;
 }
 .rating-btn {
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
     border: 1px solid rgba(0,0,0,0.3);
     font-weight: 800;
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
     color: #fff;
     text-shadow: 0 1px 2px rgba(0,0,0,0.4);
@@ -455,15 +495,15 @@ h1 {
 .tags-picker {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
 }
 .tag-chip {
-    padding: 3px 8px;
-    border-radius: 20px;
+    padding: 2px 6px;
+    border-radius: 12px;
     background: #23232b;
     border: 1px solid var(--border-light);
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
     transition: all 0.3s ease;
 }
@@ -479,15 +519,15 @@ h1 {
 }
 .game-notes {
     width: 100%;
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
     border: 1px solid var(--border-light);
     background: var(--bg);
     color: var(--text);
-    font-size: 12px;
+    font-size: 11px;
     resize: vertical;
-    min-height: 40px;
-    max-height: 100px;
+    min-height: 32px;
+    max-height: 80px;
     outline: none;
     transition: border-color 0.3s ease;
 }
@@ -498,7 +538,7 @@ h1 {
     text-align: center;
     color: var(--text-muted);
     padding: 48px 16px;
-    font-size: 15px;
+    font-size: 14px;
 }
 .toast {
     position: fixed;
@@ -522,7 +562,6 @@ h1 {
     opacity: 1;
 }
 
-/* Lightbox */
 .lightbox {
     position: fixed;
     inset: 0;
@@ -550,13 +589,10 @@ h1 {
     align-items: center;
     perspective: 1200px;
 }
-/* Обертка 3D-карточки */
 .lightbox-card {
     position: relative;
     transform-style: preserve-3d;
-    /* Размеры будут задаваться картинкой */
 }
-/* Общие стили для обеих сторон */
 .lightbox-face {
     display: block;
     max-width: 85vw;
@@ -566,7 +602,6 @@ h1 {
     backface-visibility: hidden;
     object-fit: contain;
 }
-/* Задняя сторона перевернута на 180 градусов */
 .lightbox-face.back {
     position: absolute;
     top: 0;
@@ -576,19 +611,18 @@ h1 {
     transform: rotateY(180deg);
 }
 
-/* Уменьшенная кнопка ESC */
 .esc-btn {
     position: absolute;
     top: 20px;
     right: 30px;
-    padding: 8px 16px;
+    padding: 6px 14px;
     background: linear-gradient(180deg, #3a3a4a, #1a1a22);
     color: #c0c0d0;
     font-weight: 800;
-    font-size: 12px;
-    letter-spacing: 1.5px;
+    font-size: 11px;
+    letter-spacing: 1px;
     border: 1px solid #5a5a6e;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
     box-shadow: 0 4px 0 #0a0a0f, 0 6px 15px rgba(0,0,0,0.8);
     transition: all 0.1s;
@@ -611,6 +645,7 @@ h1 {
     .game-card {
         flex-direction: column;
         align-items: stretch;
+        padding: 10px;
     }
     .cover-wrapper {
         width: 100%;
@@ -643,7 +678,7 @@ h1 {
     .esc-btn {
         top: 10px;
         right: 15px;
-        padding: 6px 12px;
+        padding: 4px 10px;
     }
 }
 </style>
@@ -693,7 +728,7 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v5';
+const STORAGE_KEY = 'game_tracker_games_v6';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
@@ -785,6 +820,7 @@ function renderGames() {
     
     gameList.innerHTML = games.map((game, index) => {
         const isEditing = game.isEditing;
+        const bgColor = game.background_image ? `url('${game.background_image}')` : 'none';
         
         if (isEditing) {
             const ratingButtons = Array.from({length: 10}, (_, i) => {
@@ -801,7 +837,7 @@ function renderGames() {
             return `
                 <div class="game-card edit-mode" data-game-index="${index}">
                     <div class="cover-wrapper">
-                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/100x100/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" draggable="false">
+                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/80x110/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" draggable="false">
                     </div>
                     <div class="game-body">
                         <div class="game-header">
@@ -821,8 +857,11 @@ function renderGames() {
                                 <div class="rating-picker">${ratingButtons}</div>
                             </div>
                             <div class="edit-section">
-                                <div class="edit-label">Ваше время (напр. 6.5):</div>
-                                <input type="number" step="0.1" min="0" class="user-playtime-input" data-game-index="${index}" value="${game.userPlaytime || ''}" placeholder="0">
+                                <div class="edit-label">Ваше время:</div>
+                                <div class="user-playtime-input-wrapper">
+                                    <input type="number" step="0.1" min="0" class="user-playtime-input" data-game-index="${index}" value="${game.userPlaytime || ''}" placeholder="0">
+                                    <span>ч</span>
+                                </div>
                             </div>
                         </div>
                         
@@ -831,9 +870,9 @@ function renderGames() {
                             <div class="tags-picker">${tagChips}</div>
                         </div>
 
-                        <textarea class="game-notes" rows="2" placeholder="Что понравилось, краткое описание..." data-game-index="${index}">${escapeHtml(game.notes || '')}</textarea>
+                        <textarea class="game-notes" rows="1" placeholder="Краткое описание..." data-game-index="${index}">${escapeHtml(game.notes || '')}</textarea>
                         
-                        <div class="game-actions" style="display:flex; gap:8px;">
+                        <div class="game-actions" style="display:flex; gap:6px;">
                             <button class="action-btn btn-success save-btn" data-game-index="${index}">Сохранить</button>
                             <button class="action-btn delete delete-btn" data-game-index="${index}">Удалить</button>
                         </div>
@@ -850,9 +889,9 @@ function renderGames() {
             const notesPreview = game.notes ? `<div class="game-notes-preview">"${escapeHtml(game.notes)}"</div>` : '';
             
             return `
-                <div class="game-card" data-game-index="${index}">
+                <div class="game-card" data-game-index="${index}" style="--card-bg: ${bgColor}">
                     <div class="cover-wrapper">
-                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/64x64/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
+                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/48x64/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
                     </div>
                     <div class="game-body">
                         <div class="game-header">
@@ -864,12 +903,12 @@ function renderGames() {
                         </div>
                         
                         <div class="game-meta" style="justify-content: space-between;">
-                            <div style="display:flex; gap:8px; align-items:center;">
+                            <div style="display:flex; gap:6px; align-items:center;">
                                 <span>⏱ HLTB: ${game.playtime ? game.playtime + 'ч' : '—'}</span>
                                 ${userTimeHtml}
                                 <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
                             </div>
-                            <div style="display:flex; gap:8px; align-items:center;">
+                            <div style="display:flex; gap:6px; align-items:center;">
                                 <div class="game-tags-view">${tagsHtml}</div>
                                 <button class="action-btn edit-btn" data-game-index="${index}">Изменить</button>
                             </div>

@@ -53,8 +53,6 @@ input[type=number] {
     --danger: #ef4444;
     --success: #10b981;
 }
-
-/* Блокировка скролла для html и body */
 html, body {
     overflow-x: hidden;
 }
@@ -62,7 +60,6 @@ html.modal-open, body.modal-open {
     overflow: hidden !important;
     height: 100vh !important;
 }
-
 body {
     background: radial-gradient(circle at 50% 0%, #1c1c26 0%, #0f0f13 70%);
     background-attachment: fixed;
@@ -74,8 +71,6 @@ body {
     padding: 24px 16px;
     position: relative;
 }
-
-/* Анимированный фон */
 body::before {
     content: '';
     position: fixed;
@@ -91,7 +86,6 @@ body::before {
     0% { transform: scale(1); opacity: 0.8; }
     100% { transform: scale(1.1); opacity: 1; }
 }
-
 .app {
     max-width: 1000px;
     width: 100%;
@@ -249,7 +243,6 @@ h1 {
     color: var(--text-muted);
     flex-wrap: wrap;
 }
-
 .game-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -402,8 +395,6 @@ h1 {
     border-color: var(--danger);
     color: #fff;
 }
-
-/* Скрытая кнопка "Изменить" */
 .edit-btn {
     opacity: 0;
     pointer-events: none;
@@ -413,8 +404,6 @@ h1 {
     opacity: 1;
     pointer-events: auto;
 }
-
-/* Modal */
 .modal {
     position: fixed;
     inset: 0;
@@ -455,7 +444,6 @@ h1 {
 .modal.active .modal-content {
     transform: translateY(0) scale(1);
 }
-
 .edit-container {
     display: flex;
     flex-direction: column;
@@ -563,7 +551,6 @@ h1 {
     color: #fff;
     box-shadow: 0 2px 5px rgba(124, 58, 237, 0.3);
 }
-
 .custom-tag-row {
     display: flex;
     gap: 6px;
@@ -597,7 +584,6 @@ h1 {
 .custom-tag-row button:hover {
     background: var(--primary-hover);
 }
-
 .game-notes {
     width: 100%;
     padding: 12px;
@@ -628,29 +614,43 @@ h1 {
     font-size: 15px;
     grid-column: 1 / -1;
 }
+
+/* Новые красивые тосты */
 .toast {
     position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--panel);
-    border: 1px solid var(--primary);
+    top: 24px;
+    right: 24px;
+    background: rgba(30, 30, 40, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-left: 4px solid var(--primary);
     color: var(--text);
-    padding: 10px 20px;
-    border-radius: 6px;
+    padding: 16px 24px;
+    border-radius: 8px;
     font-weight: 600;
-    font-size: 13px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    font-size: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transform: translateX(120%);
     opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-    z-index: 20000;
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
+    z-index: 30000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 .toast.show {
+    transform: translateX(0);
     opacity: 1;
 }
+.toast.success {
+    border-left-color: var(--success);
+}
+.toast.error {
+    border-left-color: var(--danger);
+}
 
-/* Обновленная кнопка Наверх */
+/* Кнопка Наверх */
 .backtop {
     position: fixed;
     bottom: 30px;
@@ -729,6 +729,10 @@ h1 {
     transform-origin: center center;
     pointer-events: auto;
     will-change: transform, top, left, width, height;
+    cursor: grab;
+}
+.lightbox-card:active {
+    cursor: grabbing;
 }
 .lightbox-face {
     display: block;
@@ -739,6 +743,12 @@ h1 {
     backface-visibility: hidden;
     object-fit: cover;
     will-change: object-fit, border-radius;
+    transition: box-shadow 0.3s ease, border 0.3s ease;
+    border: 1px solid transparent;
+}
+.lightbox-card:hover .lightbox-face {
+    box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 30px rgba(124, 58, 237, 0.4);
+    border-color: rgba(124, 58, 237, 0.5);
 }
 .lightbox-face.back {
     position: absolute;
@@ -746,7 +756,6 @@ h1 {
     left: 0;
     transform: rotateY(180deg);
 }
-
 .esc-btn {
     position: absolute;
     top: 20px;
@@ -777,32 +786,42 @@ h1 {
     box-shadow: 0 0px 0 #0a0a0f, 0 2px 5px rgba(0,0,0,0.8);
 }
 
-/* Подсказка для 3D */
-.lightbox-hint {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #ccc;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 13px;
-    pointer-events: none;
-    z-index: 10002;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-    backdrop-filter: blur(5px);
-    display: flex;
+/* Загрузочный экран */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 15, 19, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    gap: 8px;
+    z-index: 40000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
-.lightbox-hint.active {
+.loading-overlay.active {
+    display: flex;
     opacity: 1;
 }
-.lightbox-hint.hidden {
-    opacity: 0;
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.loading-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary);
+    letter-spacing: 1px;
 }
 
 @media (max-width: 640px) {
@@ -833,6 +852,15 @@ h1 {
     .backtop svg {
         width: 18px;
         height: 18px;
+    }
+    .toast {
+        top: 16px;
+        right: 16px;
+        left: 16px;
+        transform: translateY(-120%);
+    }
+    .toast.show {
+        transform: translateY(0);
     }
 }
 </style>
@@ -869,9 +897,6 @@ h1 {
 
 <div class="lightbox" id="lightbox">
     <div class="esc-btn" id="closeLightbox">ESC</div>
-    <div class="lightbox-hint" id="lightboxHint">
-        <span>🖱️</span> Зажмите и тяните, чтобы вращать
-    </div>
     <div class="lightbox-container">
         <div class="lightbox-card" id="lightboxCard">
             <img class="lightbox-face front" id="lightboxImgFront" src="" alt="Preview" draggable="false">
@@ -880,7 +905,12 @@ h1 {
     </div>
 </div>
 
-<div class="toast" id="toast">Ссылка скопирована!</div>
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">ЗАГРУЗКА...</div>
+</div>
+
+<div class="toast" id="toast">Сообщение</div>
 
 <script>
 let GAME_DATABASE = [];
@@ -896,7 +926,7 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v17';
+const STORAGE_KEY = 'game_tracker_games_v18';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
@@ -908,8 +938,8 @@ const editModal = document.getElementById('editModal');
 const modalBg = document.getElementById('modalBg');
 const modalContent = document.getElementById('modalContent');
 const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+const loadingOverlay = document.getElementById('loadingOverlay');
 const lightbox = document.getElementById('lightbox');
-const lightboxHint = document.getElementById('lightboxHint');
 const lightboxCard = document.getElementById('lightboxCard');
 const lightboxImgFront = document.getElementById('lightboxImgFront');
 const lightboxImgBack = document.getElementById('lightboxImgBack');
@@ -951,7 +981,7 @@ async function initDatabase() {
         renderGames();
         generateShareLink();
     } catch (error) {
-        showToast('Ошибка загрузки базы. Открой через Live Server.');
+        showToast('Ошибка загрузки базы. Открой через Live Server.', 'error');
         searchInput.placeholder = 'Ошибка загрузки базы данных';
         searchInput.disabled = true;
     }
@@ -972,10 +1002,18 @@ function saveGames() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
 }
 
-function showToast(message) {
+function showToast(message, type = 'info') {
     toast.textContent = message;
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2000);
+    toast.className = 'toast show ' + (type === 'error' ? 'error' : type === 'success' ? 'success' : '');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+function showLoader() {
+    loadingOverlay.classList.add('active');
+}
+
+function hideLoader() {
+    loadingOverlay.classList.remove('active');
 }
 
 function escapeHtml(text) {
@@ -986,6 +1024,7 @@ function escapeHtml(text) {
 }
 
 function renderGames() {
+    hideLoader();
     if (games.length === 0) {
         gameList.innerHTML = '';
         emptyState.style.display = 'block';
@@ -1133,7 +1172,7 @@ function closeEditModal() {
 function addGameFromSearch(gameData) {
     const exists = games.some(g => g.id === gameData.id);
     if (exists) {
-        showToast('Эта игра уже добавлена');
+        showToast('Эта игра уже добавлена', 'error');
         return;
     }
     games.unshift({
@@ -1153,7 +1192,7 @@ function addGameFromSearch(gameData) {
     searchInput.value = '';
     suggestionsBox.classList.remove('active');
     suggestionsBox.innerHTML = '';
-    showToast('Игра добавлена. Нажмите Изменить.');
+    showToast('Игра добавлена. Нажмите Изменить.', 'success');
     openEditModal(0);
 }
 
@@ -1225,34 +1264,45 @@ function generateShareLink() {
 function loadFromHash() {
     const hash = window.location.hash;
     if (!hash || !hash.startsWith('#data=')) return;
-    const compressed = hash.slice(6);
-    try {
-        const json = LZString.decompressFromEncodedURIComponent(compressed);
-        if (!json) return;
-        const data = JSON.parse(json);
-        if (Array.isArray(data) && data.length > 0) {
-            games = data.map(g => {
-                const dbGame = GAME_DATABASE.find(db => db.id === g.i);
-                return {
-                    id: g.i,
-                    name: dbGame ? dbGame.name : 'Unknown',
-                    background_image: dbGame ? dbGame.background_image : null,
-                    rating: dbGame ? dbGame.rating : 0,
-                    playtime: dbGame ? dbGame.playtime : 0,
-                    released: dbGame ? dbGame.released : '',
-                    userRating: g.r || null,
-                    userPlaytime: g.p || null,
-                    tags: g.t || [],
-                    notes: g.n || ''
-                };
-            });
-            saveGames();
-            renderGames();
-            showToast('Список загружен по ссылке');
+    
+    showLoader();
+    
+    setTimeout(() => {
+        const compressed = hash.slice(6);
+        try {
+            const json = LZString.decompressFromEncodedURIComponent(compressed);
+            if (!json) {
+                hideLoader();
+                return;
+            }
+            const data = JSON.parse(json);
+            if (Array.isArray(data) && data.length > 0) {
+                games = data.map(g => {
+                    const dbGame = GAME_DATABASE.find(db => db.id === g.i);
+                    return {
+                        id: g.i,
+                        name: dbGame ? dbGame.name : 'Unknown',
+                        background_image: dbGame ? dbGame.background_image : null,
+                        rating: dbGame ? dbGame.rating : 0,
+                        playtime: dbGame ? dbGame.playtime : 0,
+                        released: dbGame ? dbGame.released : '',
+                        userRating: g.r || null,
+                        userPlaytime: g.p || null,
+                        tags: g.t || [],
+                        notes: g.n || ''
+                    };
+                });
+                saveGames();
+                renderGames();
+                showToast('Список загружен по ссылке', 'success');
+            } else {
+                hideLoader();
+            }
+        } catch (e) {
+            console.error(e);
+            hideLoader();
         }
-    } catch (e) {
-        console.error(e);
-    }
+    }, 300);
 }
 
 window.addEventListener('scroll', () => {
@@ -1350,7 +1400,7 @@ modalContent.addEventListener('click', function (e) {
         saveGames();
         renderGames();
         closeEditModal();
-        showToast('Сохранено');
+        showToast('Сохранено', 'success');
         return;
     }
 
@@ -1361,7 +1411,7 @@ modalContent.addEventListener('click', function (e) {
             saveGames();
             renderGames();
             closeEditModal();
-            showToast('Игра удалена');
+            showToast('Игра удалена', 'success');
             return;
         }
 
@@ -1401,7 +1451,7 @@ modalContent.addEventListener('click', function (e) {
                     if (newInput) newInput.focus();
                 }, 10);
             } else {
-                showToast('Такой тег уже есть');
+                showToast('Такой тег уже есть', 'error');
             }
             input.value = '';
         }
@@ -1466,8 +1516,6 @@ function openLightbox(index, targetElement) {
     lightboxImgBack.style.transition = 'none';
     
     lightbox.classList.add('active');
-    lightboxHint.classList.add('active');
-    lightboxHint.classList.remove('hidden');
 
     const startRect = targetElement.getBoundingClientRect();
 
@@ -1521,12 +1569,6 @@ function openLightbox(index, targetElement) {
     hasDragged = false;
     isDragging = false;
     isSpinning = false;
-
-    setTimeout(() => {
-        if (!hasDragged) {
-            lightboxHint.classList.add('hidden');
-        }
-    }, 4000);
 }
 
 function onOpenTransitionEnd(e) {
@@ -1567,7 +1609,6 @@ lightboxCard.addEventListener('mousedown', function(e) {
     isSpinning = false;
     hasDragged = false;
     previousMousePosition = { x: e.clientX, y: e.clientY };
-    lightboxHint.classList.add('hidden');
 });
 
 window.addEventListener('mousemove', function(e) {
@@ -1638,7 +1679,6 @@ function closeLightboxFn() {
     lightboxImgFront.style.borderRadius = '8px';
 
     lightbox.classList.remove('active');
-    lightboxHint.classList.remove('active');
 }
 
 function onCloseTransitionEnd(e) {
@@ -1691,12 +1731,12 @@ lightbox.addEventListener('click', function(e) {
 copyShareBtn.addEventListener('click', function () {
     generateShareLink();
     if (!shareLinkInput.value) {
-        showToast('Список пуст');
+        showToast('Список пуст', 'error');
         return;
     }
     shareLinkInput.select();
     document.execCommand('copy');
-    showToast('Ссылка скопирована!');
+    showToast('Ссылка скопирована!', 'success');
 });
 
 window.addEventListener('hashchange', loadFromHash);

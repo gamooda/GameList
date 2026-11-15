@@ -41,18 +41,19 @@ input[type=number] {
 }
 
 :root {
-    --bg: #0f0f13;
-    --panel: #18181f;
-    --border: #27272e;
-    --border-light: #3f3f4a;
-    --text: #f0f0f5;
-    --text-muted: #9a9aad;
+    --bg: #09090b;
+    --panel: #18181b;
+    --border: #27272a;
+    --border-light: #3f3f46;
+    --text: #f4f4f5;
+    --text-muted: #a1a1aa;
     --primary: #7c3aed;
     --primary-grad: linear-gradient(135deg, #8b5cf6, #6d28d9);
     --primary-hover: #6d28d9;
     --danger: #ef4444;
     --success: #10b981;
 }
+
 html, body {
     overflow-x: hidden;
 }
@@ -60,8 +61,9 @@ html.modal-open, body.modal-open {
     overflow: hidden !important;
     height: 100vh !important;
 }
+
 body {
-    background: radial-gradient(circle at 50% 0%, #1c1c26 0%, #0f0f13 70%);
+    background: radial-gradient(circle at 50% -20%, #1e1e2e 0%, #09090b 80%);
     background-attachment: fixed;
     color: var(--text);
     min-height: 100vh;
@@ -71,21 +73,7 @@ body {
     padding: 24px 16px;
     position: relative;
 }
-body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: 
-        radial-gradient(circle at 15% 20%, rgba(124, 58, 237, 0.15) 0%, transparent 40%),
-        radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 40%);
-    animation: bgPulse 12s infinite alternate ease-in-out;
-    z-index: -1;
-    pointer-events: none;
-}
-@keyframes bgPulse {
-    0% { transform: scale(1); opacity: 0.8; }
-    100% { transform: scale(1.1); opacity: 1; }
-}
+
 .app {
     max-width: 1000px;
     width: 100%;
@@ -125,10 +113,12 @@ h1 {
     min-width: 200px;
     max-width: 350px;
     outline: none;
-    transition: border-color 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .share-bar input:focus {
     border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+    transform: translateY(-1px);
 }
 .btn {
     padding: 8px 16px;
@@ -155,6 +145,7 @@ h1 {
 .btn-primary:hover {
     filter: brightness(1.1);
     color: #fff;
+    transform: translateY(-1px);
 }
 .btn-success {
     background: var(--success);
@@ -163,6 +154,7 @@ h1 {
 }
 .btn-success:hover {
     background: #059669;
+    transform: translateY(-1px);
 }
 .search-section {
     position: relative;
@@ -177,11 +169,13 @@ h1 {
     color: var(--text);
     font-size: 15px;
     outline: none;
-    transition: border-color 0.3s ease, background 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .search-input:focus {
     border-color: var(--primary);
     background: var(--bg);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2), 0 4px 12px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
 }
 .suggestions {
     position: absolute;
@@ -243,11 +237,24 @@ h1 {
     color: var(--text-muted);
     flex-wrap: wrap;
 }
+
 .game-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
     align-items: start;
+}
+
+/* Анимация появления карточек */
+@keyframes cardAppear {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 .game-card {
     position: relative;
@@ -260,6 +267,7 @@ h1 {
     flex-direction: column;
     transition: border-color 0.3s, box-shadow 0.3s;
     z-index: 1;
+    animation: cardAppear 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
 .game-card:hover {
     border-color: var(--border-light);
@@ -404,6 +412,8 @@ h1 {
     opacity: 1;
     pointer-events: auto;
 }
+
+/* Modal */
 .modal {
     position: fixed;
     inset: 0;
@@ -493,9 +503,11 @@ h1 {
     outline: none;
     width: 60px;
     text-align: center;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .user-playtime-input:focus {
     border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
 }
 .rating-picker {
     display: flex;
@@ -512,17 +524,19 @@ h1 {
     cursor: pointer;
     color: #fff;
     text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-    transition: box-shadow 0.2s, opacity 0.2s;
+    transition: box-shadow 0.2s, opacity 0.2s, transform 0.2s;
     opacity: 0.6;
     outline: none;
 }
 .rating-btn:hover {
     opacity: 1;
+    transform: scale(1.1);
     box-shadow: 0 0 8px rgba(255,255,255,0.4);
 }
 .rating-btn.active {
     opacity: 1;
     box-shadow: inset 0 0 0 2px #fff, 0 2px 5px rgba(0,0,0,0.4);
+    transform: scale(1.15);
     z-index: 1;
 }
 .tags-picker {
@@ -544,6 +558,7 @@ h1 {
 .tag-chip:hover {
     background: rgba(255,255,255,0.1);
     color: var(--text);
+    transform: translateY(-1px);
 }
 .tag-chip.selected {
     background: var(--primary-grad);
@@ -565,10 +580,11 @@ h1 {
     color: var(--text);
     font-size: 12px;
     outline: none;
-    transition: border-color 0.3s;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .custom-tag-row input:focus {
     border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
 }
 .custom-tag-row button {
     padding: 0 16px;
@@ -579,10 +595,11 @@ h1 {
     font-weight: 800;
     font-size: 16px;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background 0.3s, transform 0.2s;
 }
 .custom-tag-row button:hover {
     background: var(--primary-hover);
+    transform: scale(1.05);
 }
 .game-notes {
     width: 100%;
@@ -596,11 +613,12 @@ h1 {
     min-height: 80px;
     max-height: 200px;
     outline: none;
-    transition: border-color 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .game-notes:focus {
     border-color: var(--primary);
     background: var(--bg);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
 }
 .edit-actions {
     display: flex;
@@ -613,42 +631,50 @@ h1 {
     padding: 48px 16px;
     font-size: 15px;
     grid-column: 1 / -1;
+    animation: cardAppear 0.5s ease backwards;
 }
 
-/* Новые красивые тосты */
-.toast {
+/* Уведомления (Toasts) */
+.toast-container {
     position: fixed;
     top: 24px;
-    right: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+.toast {
     background: rgba(30, 30, 40, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255,255,255,0.1);
-    border-left: 4px solid var(--primary);
+    border-radius: 50px;
+    padding: 12px 24px;
     color: var(--text);
-    padding: 16px 24px;
-    border-radius: 8px;
     font-weight: 600;
     font-size: 14px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    transform: translateX(120%);
-    opacity: 0;
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
-    z-index: 30000;
     display: flex;
     align-items: center;
     gap: 12px;
+    opacity: 0;
+    transform: translateY(-20px) scale(0.9);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: auto;
 }
 .toast.show {
-    transform: translateX(0);
     opacity: 1;
+    transform: translateY(0) scale(1);
 }
-.toast.success {
-    border-left-color: var(--success);
+.toast-icon {
+    font-size: 18px;
 }
-.toast.error {
-    border-left-color: var(--danger);
-}
+.toast.success .toast-icon { color: var(--success); }
+.toast.error .toast-icon { color: var(--danger); }
+.toast.info .toast-icon { color: var(--primary); }
 
 /* Кнопка Наверх */
 .backtop {
@@ -790,9 +816,9 @@ h1 {
 .loading-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 15, 19, 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(9, 9, 11, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     display: none;
     flex-direction: column;
     justify-content: center;
@@ -805,23 +831,37 @@ h1 {
     display: flex;
     opacity: 1;
 }
+.loader-logo {
+    font-size: 32px;
+    font-weight: 900;
+    margin-bottom: 24px;
+    background: var(--primary-grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: pulseLogo 2s infinite alternate;
+}
+@keyframes pulseLogo {
+    0% { opacity: 0.7; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1.05); }
+}
 .spinner {
     width: 50px;
     height: 50px;
-    border: 4px solid rgba(255, 255, 255, 0.1);
+    border: 3px solid rgba(255, 255, 255, 0.05);
     border-top-color: var(--primary);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
     margin-bottom: 16px;
 }
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 .loading-text {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--primary);
-    letter-spacing: 1px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 @media (max-width: 640px) {
@@ -853,14 +893,13 @@ h1 {
         width: 18px;
         height: 18px;
     }
-    .toast {
+    .toast-container {
         top: 16px;
-        right: 16px;
-        left: 16px;
-        transform: translateY(-120%);
+        width: 90%;
     }
-    .toast.show {
-        transform: translateY(0);
+    .toast {
+        width: 100%;
+        justify-content: center;
     }
 }
 </style>
@@ -906,11 +945,12 @@ h1 {
 </div>
 
 <div class="loading-overlay" id="loadingOverlay">
+    <div class="loader-logo">Game Tracker</div>
     <div class="spinner"></div>
-    <div class="loading-text">ЗАГРУЗКА...</div>
+    <div class="loading-text">Загрузка данных...</div>
 </div>
 
-<div class="toast" id="toast">Сообщение</div>
+<div class="toast-container" id="toastContainer"></div>
 
 <script>
 let GAME_DATABASE = [];
@@ -926,14 +966,14 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v18';
+const STORAGE_KEY = 'game_tracker_games_v19';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
 const emptyState = document.getElementById('emptyState');
 const shareLinkInput = document.getElementById('shareLinkInput');
 const copyShareBtn = document.getElementById('copyShareBtn');
-const toast = document.getElementById('toast');
+const toastContainer = document.getElementById('toastContainer');
 const editModal = document.getElementById('editModal');
 const modalBg = document.getElementById('modalBg');
 const modalContent = document.getElementById('modalContent');
@@ -971,6 +1011,7 @@ function formatTime(h, m) {
 }
 
 async function initDatabase() {
+    showLoader();
     try {
         const response = await fetch('hltb_games.json');
         if (!response.ok) throw new Error('Network response was not ok');
@@ -978,12 +1019,12 @@ async function initDatabase() {
         searchInput.placeholder = `Поиск среди ${GAME_DATABASE.length} игр...`;
         loadGames();
         loadFromHash();
-        renderGames();
         generateShareLink();
     } catch (error) {
         showToast('Ошибка загрузки базы. Открой через Live Server.', 'error');
         searchInput.placeholder = 'Ошибка загрузки базы данных';
         searchInput.disabled = true;
+        hideLoader();
     }
 }
 
@@ -1003,9 +1044,28 @@ function saveGames() {
 }
 
 function showToast(message, type = 'info') {
-    toast.textContent = message;
-    toast.className = 'toast show ' + (type === 'error' ? 'error' : type === 'success' ? 'success' : '');
-    setTimeout(() => toast.classList.remove('show'), 3000);
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    let icon = 'ℹ️';
+    if (type === 'success') icon = '✅';
+    if (type === 'error') icon = '❌';
+
+    toast.innerHTML = `<span class="toast-icon">${icon}</span><span>${escapeHtml(message)}</span>`;
+    toastContainer.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add('show');
+    });
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toastContainer.removeChild(toast);
+            }
+        }, 400);
+    }, 3000);
 }
 
 function showLoader() {
@@ -1047,9 +1107,10 @@ function renderGames() {
         const userTimeHtml = timeStr ? `<span class="user-time-badge">⏱ Моё: ${timeStr}</span>` : '';
         
         const notesPreview = game.notes ? `<div class="notes-preview">"${escapeHtml(game.notes)}"</div>` : '';
-        
+        const delay = Math.min(index * 0.04, 0.8);
+
         return `
-            <div class="game-card" data-game-index="${index}">
+            <div class="game-card" data-game-index="${index}" style="animation-delay: ${delay}s">
                 <div class="card-bg" style="background-image: ${bgImg}"></div>
                 <div class="card-content">
                     <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/400x200/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
@@ -1263,7 +1324,10 @@ function generateShareLink() {
 
 function loadFromHash() {
     const hash = window.location.hash;
-    if (!hash || !hash.startsWith('#data=')) return;
+    if (!hash || !hash.startsWith('#data=')) {
+        renderGames();
+        return;
+    }
     
     showLoader();
     
@@ -1273,6 +1337,7 @@ function loadFromHash() {
             const json = LZString.decompressFromEncodedURIComponent(compressed);
             if (!json) {
                 hideLoader();
+                renderGames();
                 return;
             }
             const data = JSON.parse(json);
@@ -1297,10 +1362,12 @@ function loadFromHash() {
                 showToast('Список загружен по ссылке', 'success');
             } else {
                 hideLoader();
+                renderGames();
             }
         } catch (e) {
             console.error(e);
             hideLoader();
+            renderGames();
         }
     }, 300);
 }

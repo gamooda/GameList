@@ -53,9 +53,16 @@ input[type=number] {
     --danger: #ef4444;
     --success: #10b981;
 }
-html {
-    scrollbar-gutter: stable;
+
+/* Блокировка скролла для html и body */
+html, body {
+    overflow-x: hidden;
 }
+html.modal-open, body.modal-open {
+    overflow: hidden !important;
+    height: 100vh !important;
+}
+
 body {
     background: radial-gradient(circle at 50% 0%, #1c1c26 0%, #0f0f13 70%);
     background-attachment: fixed;
@@ -65,7 +72,26 @@ body {
     flex-direction: column;
     align-items: center;
     padding: 24px 16px;
+    position: relative;
 }
+
+/* Анимированный фон */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+        radial-gradient(circle at 15% 20%, rgba(124, 58, 237, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 40%);
+    animation: bgPulse 12s infinite alternate ease-in-out;
+    z-index: -1;
+    pointer-events: none;
+}
+@keyframes bgPulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.1); opacity: 1; }
+}
+
 .app {
     max-width: 1000px;
     width: 100%;
@@ -624,38 +650,40 @@ h1 {
     opacity: 1;
 }
 
-/* Scroll to top button */
-.scroll-top-btn {
+/* Обновленная кнопка Наверх */
+.backtop {
     position: fixed;
     bottom: 30px;
     right: 30px;
     width: 46px;
     height: 46px;
     border-radius: 50%;
-    background: var(--primary-grad);
-    color: white;
-    border: none;
-    font-size: 22px;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.3s ease;
-    z-index: 5000;
+    background: #1a1a22;
+    border: 1px solid var(--border-light);
+    color: var(--text);
     display: flex;
     justify-content: center;
     align-items: center;
+    cursor: pointer;
+    z-index: 5000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
-.scroll-top-btn.visible {
+.backtop.show {
     opacity: 1;
-    pointer-events: auto;
-}
-.scroll-top-btn:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.6);
-}
-.scroll-top-btn:active {
+    visibility: visible;
     transform: translateY(0);
+}
+.backtop:hover {
+    background: #23232b;
+    border-color: #555;
+}
+.backtop svg {
+    width: 22px;
+    height: 22px;
 }
 
 /* Lightbox */
@@ -749,6 +777,34 @@ h1 {
     box-shadow: 0 0px 0 #0a0a0f, 0 2px 5px rgba(0,0,0,0.8);
 }
 
+/* Подсказка для 3D */
+.lightbox-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ccc;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    pointer-events: none;
+    z-index: 10002;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.lightbox-hint.active {
+    opacity: 1;
+}
+.lightbox-hint.hidden {
+    opacity: 0;
+}
+
 @media (max-width: 640px) {
     .game-list {
         grid-template-columns: 1fr;
@@ -768,12 +824,15 @@ h1 {
         right: 15px;
         padding: 4px 10px;
     }
-    .scroll-top-btn {
+    .backtop {
         bottom: 20px;
         right: 20px;
         width: 40px;
         height: 40px;
-        font-size: 18px;
+    }
+    .backtop svg {
+        width: 18px;
+        height: 18px;
     }
 }
 </style>
@@ -797,7 +856,11 @@ h1 {
     <div class="empty-state" id="emptyState">Пока нет пройденных игр. Найдите игру через поиск выше.</div>
 </div>
 
-<button class="scroll-top-btn" id="scrollToTopBtn" title="Наверх">↑</button>
+<button class="backtop" id="scrollToTopBtn" aria-label="Наверх" title="Наверх">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+</button>
 
 <div class="modal" id="editModal">
     <div class="modal-bg" id="modalBg"></div>
@@ -806,6 +869,9 @@ h1 {
 
 <div class="lightbox" id="lightbox">
     <div class="esc-btn" id="closeLightbox">ESC</div>
+    <div class="lightbox-hint" id="lightboxHint">
+        <span>🖱️</span> Зажмите и тяните, чтобы вращать
+    </div>
     <div class="lightbox-container">
         <div class="lightbox-card" id="lightboxCard">
             <img class="lightbox-face front" id="lightboxImgFront" src="" alt="Preview" draggable="false">
@@ -830,7 +896,7 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v16';
+const STORAGE_KEY = 'game_tracker_games_v17';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
@@ -843,6 +909,7 @@ const modalBg = document.getElementById('modalBg');
 const modalContent = document.getElementById('modalContent');
 const scrollToTopBtn = document.getElementById('scrollToTopBtn');
 const lightbox = document.getElementById('lightbox');
+const lightboxHint = document.getElementById('lightboxHint');
 const lightboxCard = document.getElementById('lightboxCard');
 const lightboxImgFront = document.getElementById('lightboxImgFront');
 const lightboxImgBack = document.getElementById('lightboxImgBack');
@@ -1051,12 +1118,14 @@ function openEditModal(index) {
     editingGameIndex = index;
     renderEditModal();
     editModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    document.documentElement.classList.add('modal-open');
+    document.body.classList.add('modal-open');
 }
 
 function closeEditModal() {
     editModal.classList.remove('active');
-    document.body.style.overflow = '';
+    document.documentElement.classList.remove('modal-open');
+    document.body.classList.remove('modal-open');
     resetDeleteState();
     editingGameIndex = null;
 }
@@ -1188,9 +1257,9 @@ function loadFromHash() {
 
 window.addEventListener('scroll', () => {
     if (window.scrollY > 300) {
-        scrollToTopBtn.classList.add('visible');
+        scrollToTopBtn.classList.add('show');
     } else {
-        scrollToTopBtn.classList.remove('visible');
+        scrollToTopBtn.classList.remove('show');
     }
 });
 
@@ -1288,7 +1357,6 @@ modalContent.addEventListener('click', function (e) {
     if (target.id === 'modalDeleteBtn') {
         const btn = document.getElementById('modalDeleteBtn');
         if (isDeleting) {
-            // Второй клик - удаляем
             games.splice(editingGameIndex, 1);
             saveGames();
             renderGames();
@@ -1297,7 +1365,6 @@ modalContent.addEventListener('click', function (e) {
             return;
         }
 
-        // Первый клик - запускаем таймер
         isDeleting = true;
         let sec = 5;
         btn.disabled = true;
@@ -1389,9 +1456,8 @@ function openLightbox(index, targetElement) {
     lightboxImgBack.src = imgUrl;
     
     scrollY = window.scrollY;
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = '100%';
+    document.documentElement.classList.add('modal-open');
+    document.body.classList.add('modal-open');
     
     targetElement.style.opacity = '0';
     
@@ -1400,6 +1466,8 @@ function openLightbox(index, targetElement) {
     lightboxImgBack.style.transition = 'none';
     
     lightbox.classList.add('active');
+    lightboxHint.classList.add('active');
+    lightboxHint.classList.remove('hidden');
 
     const startRect = targetElement.getBoundingClientRect();
 
@@ -1453,6 +1521,12 @@ function openLightbox(index, targetElement) {
     hasDragged = false;
     isDragging = false;
     isSpinning = false;
+
+    setTimeout(() => {
+        if (!hasDragged) {
+            lightboxHint.classList.add('hidden');
+        }
+    }, 4000);
 }
 
 function onOpenTransitionEnd(e) {
@@ -1493,6 +1567,7 @@ lightboxCard.addEventListener('mousedown', function(e) {
     isSpinning = false;
     hasDragged = false;
     previousMousePosition = { x: e.clientX, y: e.clientY };
+    lightboxHint.classList.add('hidden');
 });
 
 window.addEventListener('mousemove', function(e) {
@@ -1563,6 +1638,7 @@ function closeLightboxFn() {
     lightboxImgFront.style.borderRadius = '8px';
 
     lightbox.classList.remove('active');
+    lightboxHint.classList.remove('active');
 }
 
 function onCloseTransitionEnd(e) {
@@ -1574,9 +1650,8 @@ function onCloseTransitionEnd(e) {
 lightboxCard.addEventListener('transitionend', onCloseTransitionEnd);
 
 function forceClose() {
-    document.body.style.position = '';
-    document.body.style.top = '';
-    document.body.style.width = '';
+    document.documentElement.classList.remove('modal-open');
+    document.body.classList.remove('modal-open');
     window.scrollTo(0, scrollY);
 
     lightboxCard.style.transition = '';

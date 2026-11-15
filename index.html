@@ -245,6 +245,7 @@ h1 {
     align-items: start;
 }
 
+/* Анимация появления карточек */
 @keyframes cardAppear {
     from {
         opacity: 0;
@@ -412,6 +413,7 @@ h1 {
     pointer-events: auto;
 }
 
+/* Modal */
 .modal {
     position: fixed;
     inset: 0;
@@ -632,34 +634,35 @@ h1 {
     animation: cardAppear 0.5s ease backwards;
 }
 
+/* Уведомления (Toasts) */
 .toast-container {
     position: fixed;
-    top: 16px;
+    top: 24px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 30000;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 12px;
     pointer-events: none;
 }
 .toast {
-    background: rgba(30, 30, 40, 0.9);
+    background: rgba(30, 30, 40, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 50px;
-    padding: 6px 14px;
+    padding: 12px 24px;
     color: var(--text);
     font-weight: 600;
-    font-size: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    font-size: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 12px;
     opacity: 0;
-    transform: translateY(-10px) scale(0.95);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: translateY(-20px) scale(0.9);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     pointer-events: auto;
 }
 .toast.show {
@@ -667,12 +670,13 @@ h1 {
     transform: translateY(0) scale(1);
 }
 .toast-icon {
-    font-size: 12px;
+    font-size: 18px;
 }
 .toast.success .toast-icon { color: var(--success); }
 .toast.error .toast-icon { color: var(--danger); }
 .toast.info .toast-icon { color: var(--primary); }
 
+/* Кнопка Наверх */
 .backtop {
     position: fixed;
     bottom: 30px;
@@ -708,6 +712,7 @@ h1 {
     height: 22px;
 }
 
+/* Lightbox */
 .lightbox {
     position: fixed;
     top: 0;
@@ -807,12 +812,13 @@ h1 {
     box-shadow: 0 0px 0 #0a0a0f, 0 2px 5px rgba(0,0,0,0.8);
 }
 
+/* Загрузочный экран */
 .loading-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(9, 9, 11, 0.5);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(9, 9, 11, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     display: none;
     flex-direction: column;
     justify-content: center;
@@ -825,16 +831,37 @@ h1 {
     display: flex;
     opacity: 1;
 }
+.loader-logo {
+    font-size: 32px;
+    font-weight: 900;
+    margin-bottom: 24px;
+    background: var(--primary-grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: pulseLogo 2s infinite alternate;
+}
+@keyframes pulseLogo {
+    0% { opacity: 0.7; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1.05); }
+}
 .spinner {
     width: 50px;
     height: 50px;
-    border: 3px solid rgba(255, 255, 255, 0.1);
+    border: 3px solid rgba(255, 255, 255, 0.05);
     border-top-color: var(--primary);
     border-radius: 50%;
     animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    margin-bottom: 16px;
 }
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+.loading-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 @media (max-width: 640px) {
@@ -867,7 +894,7 @@ h1 {
         height: 18px;
     }
     .toast-container {
-        top: 12px;
+        top: 16px;
         width: 90%;
     }
     .toast {
@@ -918,7 +945,9 @@ h1 {
 </div>
 
 <div class="loading-overlay" id="loadingOverlay">
+    <div class="loader-logo">Game Tracker</div>
     <div class="spinner"></div>
+    <div class="loading-text">Загрузка данных...</div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -995,7 +1024,6 @@ async function initDatabase() {
         showToast('Ошибка загрузки базы. Открой через Live Server.', 'error');
         searchInput.placeholder = 'Ошибка загрузки базы данных';
         searchInput.disabled = true;
-    } finally {
         hideLoader();
     }
 }
@@ -1056,6 +1084,7 @@ function escapeHtml(text) {
 }
 
 function renderGames() {
+    hideLoader();
     if (games.length === 0) {
         gameList.innerHTML = '';
         emptyState.style.display = 'block';
@@ -1300,39 +1329,47 @@ function loadFromHash() {
         return;
     }
     
-    const compressed = hash.slice(6);
-    try {
-        const json = LZString.decompressFromEncodedURIComponent(compressed);
-        if (!json) {
+    showLoader();
+    
+    setTimeout(() => {
+        const compressed = hash.slice(6);
+        try {
+            const json = LZString.decompressFromEncodedURIComponent(compressed);
+            if (!json) {
+                hideLoader();
+                renderGames();
+                return;
+            }
+            const data = JSON.parse(json);
+            if (Array.isArray(data) && data.length > 0) {
+                games = data.map(g => {
+                    const dbGame = GAME_DATABASE.find(db => db.id === g.i);
+                    return {
+                        id: g.i,
+                        name: dbGame ? dbGame.name : 'Unknown',
+                        background_image: dbGame ? dbGame.background_image : null,
+                        rating: dbGame ? dbGame.rating : 0,
+                        playtime: dbGame ? dbGame.playtime : 0,
+                        released: dbGame ? dbGame.released : '',
+                        userRating: g.r || null,
+                        userPlaytime: g.p || null,
+                        tags: g.t || [],
+                        notes: g.n || ''
+                    };
+                });
+                saveGames();
+                renderGames();
+                showToast('Список загружен по ссылке', 'success');
+            } else {
+                hideLoader();
+                renderGames();
+            }
+        } catch (e) {
+            console.error(e);
+            hideLoader();
             renderGames();
-            return;
         }
-        const data = JSON.parse(json);
-        if (Array.isArray(data) && data.length > 0) {
-            games = data.map(g => {
-                const dbGame = GAME_DATABASE.find(db => db.id === g.i);
-                return {
-                    id: g.i,
-                    name: dbGame ? dbGame.name : 'Unknown',
-                    background_image: dbGame ? dbGame.background_image : null,
-                    rating: dbGame ? dbGame.rating : 0,
-                    playtime: dbGame ? dbGame.playtime : 0,
-                    released: dbGame ? dbGame.released : '',
-                    userRating: g.r || null,
-                    userPlaytime: g.p || null,
-                    tags: g.t || [],
-                    notes: g.n || ''
-                };
-            });
-            saveGames();
-            renderGames();
-            showToast('Список загружен по ссылке', 'success');
-        } else {
-            renderGames();
-        }
-    } catch (e) {
-        renderGames();
-    }
+    }, 300);
 }
 
 window.addEventListener('scroll', () => {

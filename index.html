@@ -54,7 +54,7 @@ body {
     padding: 24px 16px;
 }
 .app {
-    max-width: 900px;
+    max-width: 800px;
     width: 100%;
 }
 header {
@@ -90,7 +90,7 @@ h1 {
     font-size: 13px;
     flex: 1;
     min-width: 200px;
-    max-width: 400px;
+    max-width: 350px;
     outline: none;
     transition: border-color 0.3s ease;
 }
@@ -215,17 +215,17 @@ h1 {
 .game-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 .game-card {
     background: var(--panel);
     border-radius: 8px;
-    padding: 10px;
+    padding: 8px 12px;
     border: 1px solid var(--border);
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
     z-index: 1;
 }
@@ -243,37 +243,37 @@ h1 {
     z-index: 5;
 }
 .game-cover {
-    width: 80px;
-    height: 80px;
-    border-radius: 6px;
+    width: 64px;
+    height: 64px;
+    border-radius: 4px;
     object-fit: cover;
     background: var(--bg);
     flex-shrink: 0;
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
     cursor: pointer;
 }
 .game-cover:hover {
-    transform: scale(1.6) rotate(-3deg) perspective(600px) rotateY(10deg) rotateX(5deg);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+    transform: scale(1.3) translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
     z-index: 100;
 }
 .game-card.edit-mode .game-cover {
-    width: 120px;
-    height: 120px;
+    width: 100px;
+    height: 100px;
     pointer-events: none;
 }
 .game-card.edit-mode .game-cover:hover {
     transform: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
 }
 .game-body {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    transition: all 0.4s ease;
+    gap: 3px;
+    transition: all 0.3s ease;
 }
 .game-card.edit-mode .game-body {
     gap: 12px;
@@ -283,31 +283,31 @@ h1 {
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 }
 .game-title {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: font-size 0.4s ease;
+    transition: font-size 0.3s ease;
 }
 .game-card.edit-mode .game-title {
-    font-size: 20px;
+    font-size: 18px;
     white-space: normal;
 }
 .badges-row {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
     align-items: center;
 }
 .game-rating-badge {
     background: #2a2a35;
     color: #e0e0e0;
-    padding: 2px 6px;
+    padding: 1px 6px;
     border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
@@ -316,39 +316,38 @@ h1 {
 }
 .user-rating-badge {
     color: #fff;
-    padding: 2px 6px;
+    padding: 1px 6px;
     border-radius: 4px;
     font-size: 11px;
     font-weight: 700;
     white-space: nowrap;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}
-.game-meta-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
 }
 .game-meta {
     display: flex;
+    align-items: center;
     gap: 10px;
     font-size: 11px;
     color: var(--text-muted);
     flex-wrap: wrap;
-    align-items: center;
+}
+.user-time-badge {
+    color: #34d399;
+    font-weight: 600;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 1px 4px;
+    border-radius: 3px;
 }
 .game-tags-view {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    flex: 1;
+    align-items: center;
 }
 .game-tag-view {
     background: #23232b;
-    padding: 1px 6px;
-    border-radius: 4px;
+    padding: 1px 5px;
+    border-radius: 3px;
     font-size: 10px;
     color: #b0b0c0;
     border: 1px solid #2d2d38;
@@ -361,14 +360,14 @@ h1 {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 400px;
+    max-width: 100%;
     margin-top: 2px;
 }
 .action-btn {
     background: transparent;
     border: 1px solid var(--border-light);
     color: var(--text-muted);
-    padding: 3px 10px;
+    padding: 2px 8px;
     border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
@@ -388,13 +387,13 @@ h1 {
 .edit-section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 .edit-row {
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-end;
 }
 .edit-label {
     font-size: 12px;
@@ -402,14 +401,13 @@ h1 {
     font-weight: 600;
 }
 .user-playtime-input {
-    width: 60px;
+    width: 80px;
     padding: 4px 8px;
     border-radius: 4px;
     border: 1px solid var(--border-light);
     background: var(--bg);
     color: var(--text);
     font-size: 13px;
-    text-align: center;
     outline: none;
     transition: border-color 0.2s;
 }
@@ -422,12 +420,12 @@ h1 {
     flex-wrap: wrap;
 }
 .rating-btn {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     border-radius: 4px;
     border: 1px solid rgba(0,0,0,0.3);
     font-weight: 800;
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
     color: #fff;
     text-shadow: 0 1px 2px rgba(0,0,0,0.4);
@@ -451,7 +449,7 @@ h1 {
     gap: 6px;
 }
 .tag-chip {
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 20px;
     background: #23232b;
     border: 1px solid var(--border-light);
@@ -472,15 +470,15 @@ h1 {
 }
 .game-notes {
     width: 100%;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 6px;
     border: 1px solid var(--border-light);
     background: var(--bg);
     color: var(--text);
-    font-size: 13px;
+    font-size: 12px;
     resize: vertical;
-    min-height: 50px;
-    max-height: 120px;
+    min-height: 40px;
+    max-height: 100px;
     outline: none;
     transition: border-color 0.3s ease;
 }
@@ -514,6 +512,52 @@ h1 {
 .toast.show {
     opacity: 1;
 }
+
+/* Lightbox */
+.lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+.lightbox.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    transform: scale(0.9);
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.lightbox.active img {
+    transform: scale(1);
+}
+.close-lightbox {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: #fff;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+    line-height: 1;
+}
+.close-lightbox:hover {
+    color: var(--danger);
+}
+
 @media (max-width: 640px) {
     .game-card {
         flex-direction: column;
@@ -526,7 +570,7 @@ h1 {
     }
     .game-cover:hover {
         transform: none;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.4);
     }
     .game-header, .game-meta-row {
         flex-direction: column;
@@ -567,6 +611,11 @@ h1 {
     <div class="empty-state" id="emptyState">Пока нет пройденных игр. Найдите игру через поиск выше.</div>
 </div>
 
+<div class="lightbox" id="lightbox">
+    <span class="close-lightbox" id="closeLightbox">&times;</span>
+    <img id="lightboxImg" src="" alt="Preview">
+</div>
+
 <div class="toast" id="toast">Ссылка скопирована!</div>
 
 <script>
@@ -583,7 +632,7 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v4';
+const STORAGE_KEY = 'game_tracker_games_v5';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
@@ -591,9 +640,24 @@ const emptyState = document.getElementById('emptyState');
 const shareLinkInput = document.getElementById('shareLinkInput');
 const copyShareBtn = document.getElementById('copyShareBtn');
 const toast = document.getElementById('toast');
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightboxImg');
+const closeLightbox = document.getElementById('closeLightbox');
 
 let games = [];
 let debounceTimer = null;
+
+function formatTime(val) {
+    if (!val) return '';
+    let num = parseFloat(val);
+    if (isNaN(num)) return val;
+    if (num === 0) return '';
+    let h = Math.floor(num);
+    let m = Math.round((num - h) * 60);
+    if (h > 0 && m > 0) return `${h}ч ${m}м`;
+    if (h > 0) return `${h}ч`;
+    return `${m}м`;
+}
 
 async function initDatabase() {
     try {
@@ -667,7 +731,7 @@ function renderGames() {
 
             return `
                 <div class="game-card edit-mode" data-game-index="${index}">
-                    <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/120x120/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}">
+                    <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/100x100/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}">
                     <div class="game-body">
                         <div class="game-header">
                             <div class="game-title">${escapeHtml(game.name)}</div>
@@ -676,7 +740,7 @@ function renderGames() {
                             </div>
                         </div>
                         <div class="game-meta">
-                            <span>⏱ По HLTB: ${game.playtime ? game.playtime + ' ч' : '—'}</span>
+                            <span>⏱ HLTB: ${game.playtime ? game.playtime + ' ч' : '—'}</span>
                             <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
                         </div>
                         
@@ -686,8 +750,8 @@ function renderGames() {
                                 <div class="rating-picker">${ratingButtons}</div>
                             </div>
                             <div class="edit-section">
-                                <div class="edit-label">Ваше время (ч):</div>
-                                <input type="number" min="0" class="user-playtime-input" data-game-index="${index}" value="${game.userPlaytime || ''}" placeholder="0">
+                                <div class="edit-label">Ваше время (напр. 6.5):</div>
+                                <input type="number" step="0.1" min="0" class="user-playtime-input" data-game-index="${index}" value="${game.userPlaytime || ''}" placeholder="0">
                             </div>
                         </div>
                         
@@ -708,12 +772,15 @@ function renderGames() {
         } else {
             const tagsHtml = (game.tags || []).map(tag => `<span class="game-tag-view">${escapeHtml(tag)}</span>`).join('');
             const userRatingHtml = game.userRating ? `<div class="user-rating-badge" style="background: ${RATING_COLORS[game.userRating]}">⭐ ${game.userRating} / 10</div>` : '';
-            const userTimeHtml = game.userPlaytime ? `<span style="color:var(--success); font-weight:600;">⏱ Моё: ${game.userPlaytime} ч</span>` : '';
+            
+            let timeStr = formatTime(game.userPlaytime);
+            const userTimeHtml = timeStr ? `<span class="user-time-badge">⏱ Моё: ${timeStr}</span>` : '';
+            
             const notesPreview = game.notes ? `<div class="game-notes-preview">"${escapeHtml(game.notes)}"</div>` : '';
             
             return `
                 <div class="game-card" data-game-index="${index}">
-                    <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/80x80/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy">
+                    <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/64x64/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}">
                     <div class="game-body">
                         <div class="game-header">
                             <div class="game-title">${escapeHtml(game.name)}</div>
@@ -723,9 +790,9 @@ function renderGames() {
                             </div>
                         </div>
                         
-                        <div class="game-meta-row">
-                            <div class="game-meta">
-                                <span>⏱ HLTB: ${game.playtime ? game.playtime + ' ч' : '—'}</span>
+                        <div class="game-meta" style="justify-content: space-between;">
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <span>⏱ HLTB: ${game.playtime ? game.playtime + 'ч' : '—'}</span>
                                 ${userTimeHtml}
                                 <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
                             </div>
@@ -890,6 +957,15 @@ document.addEventListener('click', function (e) {
 gameList.addEventListener('click', function (e) {
     const target = e.target;
     
+    if (target.classList.contains('game-cover') && !target.closest('.edit-mode')) {
+        const index = parseInt(target.dataset.index);
+        if (games[index] && games[index].background_image) {
+            lightboxImg.src = games[index].background_image;
+            lightbox.classList.add('active');
+        }
+        return;
+    }
+
     if (target.classList.contains('delete-btn')) {
         const index = parseInt(target.dataset.gameIndex);
         games.splice(index, 1);
@@ -947,9 +1023,19 @@ gameList.addEventListener('input', function (e) {
     }
     if (e.target.classList.contains('user-playtime-input')) {
         const index = parseInt(e.target.dataset.gameIndex);
-        let val = parseInt(e.target.value);
+        let val = parseFloat(e.target.value);
         games[index].userPlaytime = isNaN(val) || val < 0 ? null : val;
         saveGames();
+    }
+});
+
+closeLightbox.addEventListener('click', function() {
+    lightbox.classList.remove('active');
+});
+
+lightbox.addEventListener('click', function(e) {
+    if (e.target === lightbox) {
+        lightbox.classList.remove('active');
     }
 });
 

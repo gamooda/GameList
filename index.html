@@ -53,16 +53,9 @@ input[type=number] {
     --danger: #ef4444;
     --success: #10b981;
 }
-
-/* Предотвращает смещение контента при исчезновении скроллбара */
 html {
     scrollbar-gutter: stable;
 }
-html.lightbox-open, body.lightbox-open {
-    overflow: hidden !important;
-    height: 100vh !important;
-}
-
 body {
     background: var(--bg);
     color: var(--text);
@@ -543,7 +536,7 @@ h1 {
     opacity: 1;
 }
 
-/* Lightbox */
+/* Lightbox Base */
 .lightbox {
     position: fixed;
     top: 0;
@@ -551,20 +544,22 @@ h1 {
     width: 100vw;
     height: 100vh;
     background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 10000;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.3s ease, backdrop-filter 0.4s ease;
     overflow: hidden;
 }
 .lightbox.active {
     opacity: 1;
     pointer-events: auto;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
 }
 .lightbox-container {
     position: absolute;
@@ -580,6 +575,9 @@ h1 {
 .lightbox-card {
     position: relative;
     transform-style: preserve-3d;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 .lightbox-face {
     display: block;
@@ -696,7 +694,7 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v10';
+const STORAGE_KEY = 'game_tracker_games_v11';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
@@ -720,6 +718,7 @@ let currentRotation = { x: 0, y: 0 };
 let isSpinning = true;
 let spinAnimationId;
 let lastTime = performance.now();
+let scrollY = 0;
 
 function formatTime(val) {
     if (!val) return '';
@@ -1045,23 +1044,7 @@ gameList.addEventListener('click', function (e) {
     if (target.classList.contains('game-cover') && !target.closest('.edit-mode')) {
         const index = parseInt(target.dataset.index);
         if (games[index] && games[index].background_image) {
-            const imgUrl = games[index].background_image;
-            lightboxImgFront.src = imgUrl;
-            lightboxImgBack.src = imgUrl;
-            
-            currentRotation = { x: 0, y: 0 };
-            hasDragged = false;
-            isDragging = false;
-            isSpinning = true;
-            lightboxCard.style.transform = '';
-            lightbox.classList.add('active');
-            
-            // Блокируем скролл страницы жестко на html и body
-            document.documentElement.classList.add('lightbox-open');
-            document.body.classList.add('lightbox-open');
-            
-            lastTime = performance.now();
-            if (!spinAnimationId) spinAnimationId = requestAnimationFrame(spinLoop);
+            openLightbox(index, target);
         }
         return;
     }
@@ -1129,6 +1112,57 @@ gameList.addEventListener('input', function (e) {
     }
 });
 
+function openLightbox(index, targetElement) {
+    const imgUrl = games[index].background_image;
+    lightboxImgFront.src = imgUrl;
+    lightboxImgBack.src = imgUrl;
+    
+    scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    
+    lightbox.classList.add('active');
+    
+    // FLIP Animation
+    const startRect = targetElement.getBoundingClientRect();
+    
+    requestAnimationFrame(() => {
+        const endRect = lightboxImgFront.getBoundingClientRect();
+        
+        const scaleX = startRect.width / endRect.width;
+        const scaleY = startRect.height / endRect.height;
+        
+        const centerX = startRect.left + startRect.width / 2;
+        const centerY = startRect.top + startRect.height / 2;
+        
+        const targetCenterX = endRect.left + endRect.width / 2;
+        const targetCenterY = endRect.top + endRect.height / 2;
+        
+        const deltaX = centerX - targetCenterX;
+        const deltaY = centerY - targetCenterY;
+
+        lightboxCard.style.transition = 'none';
+        lightboxCard.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(${scaleX})`;
+        
+        void lightboxCard.offsetWidth;
+        
+        lightboxCard.style.transition = 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        lightboxCard.style.transform = 'translate(0, 0) scale(1)';
+
+        currentRotation = { x: 0, y: 0 };
+        hasDragged = false;
+        isDragging = false;
+        isSpinning = false;
+        
+        setTimeout(() => {
+            isSpinning = true;
+            lastTime = performance.now();
+            lightboxCard.style.transition = '';
+        }, 500);
+    });
+}
+
 function spinLoop(time) {
     if (lightbox.classList.contains('active')) {
         const deltaTime = time - lastTime;
@@ -1185,8 +1219,12 @@ window.addEventListener('mouseup', function() {
 
 function closeLightboxFn() {
     lightbox.classList.remove('active');
-    document.documentElement.classList.remove('lightbox-open');
-    document.body.classList.remove('lightbox-open');
+    
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    window.scrollTo(0, scrollY);
+    
     isSpinning = false;
     isDragging = false;
     hasDragged = false;

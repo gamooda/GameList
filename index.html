@@ -589,6 +589,7 @@ h1 {
     align-items: center;
     transform-origin: center center;
     pointer-events: auto;
+    will-change: transform, top, left, width, height;
 }
 .lightbox-face {
     display: block;
@@ -598,6 +599,7 @@ h1 {
     box-shadow: 0 20px 60px rgba(0,0,0,0.9);
     backface-visibility: hidden;
     object-fit: cover;
+    will-change: object-fit, border-radius;
 }
 .lightbox-face.back {
     position: absolute;
@@ -703,7 +705,7 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v12';
+const STORAGE_KEY = 'game_tracker_games_v13';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
@@ -724,11 +726,12 @@ let isDragging = false;
 let hasDragged = false;
 let previousMousePosition = { x: 0, y: 0 };
 let currentRotation = { x: 0, y: 0 };
-let isSpinning = true;
+let isSpinning = false;
 let spinAnimationId;
 let lastTime = performance.now();
 let scrollY = 0;
 let activeTargetElement = null;
+let isTransitioning = false;
 
 function formatTime(val) {
     if (!val) return '';
@@ -1123,6 +1126,9 @@ gameList.addEventListener('input', function (e) {
 });
 
 function openLightbox(index, targetElement) {
+    if (isTransitioning || lightbox.classList.contains('active')) return;
+    isTransitioning = true;
+
     activeTargetElement = targetElement;
     const imgUrl = games[index].background_image;
     lightboxImgFront.src = imgUrl;
@@ -1134,40 +1140,22 @@ function openLightbox(index, targetElement) {
     document.body.style.width = '100%';
     
     targetElement.style.opacity = '0';
-    lightbox.classList.add('active');
     
-    const startRect = targetElement.getBoundingClientRect();
-
-    // 1. Measure final state
     lightboxCard.style.transition = 'none';
     lightboxImgFront.style.transition = 'none';
     lightboxImgBack.style.transition = 'none';
+    
+    lightbox.classList.add('active');
+    document.body.classList.add('lightbox-open');
 
-    lightboxCard.style.position = 'relative';
-    lightboxCard.style.width = 'auto';
-    lightboxCard.style.height = 'auto';
-    lightboxCard.style.top = 'auto';
-    lightboxCard.style.left = 'auto';
-    lightboxCard.style.transform = 'none';
+    const startRect = targetElement.getBoundingClientRect();
 
-    lightboxImgFront.style.width = 'auto';
-    lightboxImgFront.style.height = 'auto';
-    lightboxImgFront.style.maxWidth = '85vw';
-    lightboxImgFront.style.maxHeight = '85vh';
-    lightboxImgFront.style.objectFit = 'contain';
-    lightboxImgFront.style.borderRadius = '12px';
-
-    void lightboxCard.offsetWidth;
-
-    const finalWidth = lightboxImgFront.offsetWidth;
-    const finalHeight = lightboxImgFront.offsetHeight;
-
-    // 2. Set initial state (from card)
     lightboxCard.style.position = 'fixed';
     lightboxCard.style.top = `${startRect.top}px`;
     lightboxCard.style.left = `${startRect.left}px`;
     lightboxCard.style.width = `${startRect.width}px`;
     lightboxCard.style.height = `${startRect.height}px`;
+    lightboxCard.style.transform = 'none';
 
     lightboxImgFront.style.width = '100%';
     lightboxImgFront.style.height = '100%';
@@ -1178,43 +1166,51 @@ function openLightbox(index, targetElement) {
 
     void lightboxCard.offsetWidth;
 
-    // 3. Animate to center
-    lightboxCard.style.transition = 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
-    lightboxImgFront.style.transition = 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
-    lightboxImgBack.style.transition = 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    // Вычисляем конечную позицию
+    const tempImg = new Image();
+    tempImg.onload = () => {
+        const maxW = window.innerWidth * 0.85;
+        const maxH = window.innerHeight * 0.85;
+        let finalW = tempImg.width;
+        let finalH = tempImg.height;
+        
+        const ratio = Math.min(maxW / finalW, maxH / finalH);
+        if (ratio < 1) {
+            finalW *= ratio;
+            finalH *= ratio;
+        }
 
-    const finalTop = (window.innerHeight - finalHeight) / 2;
-    const finalLeft = (window.innerWidth - finalWidth) / 2;
+        const finalTop = (window.innerHeight - finalH) / 2;
+        const finalLeft = (window.innerWidth - finalW) / 2;
 
-    lightboxCard.style.top = `${finalTop}px`;
-    lightboxCard.style.left = `${finalLeft}px`;
-    lightboxCard.style.width = `${finalWidth}px`;
-    lightboxCard.style.height = `${finalHeight}px`;
+        lightboxCard.style.transition = 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
+        lightboxImgFront.style.transition = 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
+        lightboxImgBack.style.transition = 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
-    lightboxImgFront.style.objectFit = 'contain';
-    lightboxImgFront.style.borderRadius = '12px';
-    lightboxImgFront.style.width = '100%';
-    lightboxImgFront.style.height = '100%';
+        lightboxCard.style.top = `${finalTop}px`;
+        lightboxCard.style.left = `${finalLeft}px`;
+        lightboxCard.style.width = `${finalW}px`;
+        lightboxCard.style.height = `${finalH}px`;
 
-    currentRotation = { x: 0, y: 0 };
-    hasDragged = false;
-    isDragging = false;
-    isSpinning = false;
+        lightboxImgFront.style.objectFit = 'contain';
+        lightboxImgFront.style.borderRadius = '12px';
 
-    // 4. Post-animation state
+        isSpinning = true;
+        lastTime = performance.now();
+    };
+    tempImg.src = imgUrl;
+
     setTimeout(() => {
+        isTransitioning = false;
         lightboxCard.style.transition = 'none';
         lightboxCard.style.top = '50%';
         lightboxCard.style.left = '50%';
         lightboxCard.style.transform = 'translate(-50%, -50%)';
-        
-        isSpinning = true;
-        lastTime = performance.now();
-    }, 500);
+    }, 400);
 }
 
 function spinLoop(time) {
-    if (lightbox.classList.contains('active')) {
+    if (lightbox.classList.contains('active') && !isTransitioning) {
         const deltaTime = time - lastTime;
         lastTime = time;
 
@@ -1232,6 +1228,7 @@ function spinLoop(time) {
 }
 
 lightboxCard.addEventListener('mousedown', function(e) {
+    if (isTransitioning) return;
     e.preventDefault();
     isDragging = true;
     isSpinning = false;
@@ -1268,10 +1265,8 @@ window.addEventListener('mouseup', function() {
 });
 
 function closeLightboxFn() {
-    if (!activeTargetElement) {
-        forceClose();
-        return;
-    }
+    if (isTransitioning || !lightbox.classList.contains('active')) return;
+    isTransitioning = true;
 
     const startRect = lightboxCard.getBoundingClientRect();
     const endRect = activeTargetElement.getBoundingClientRect();
@@ -1279,6 +1274,11 @@ function closeLightboxFn() {
     isSpinning = false;
     isDragging = false;
     hasDragged = false;
+
+    // Мгновенно возвращаем картинку в карточке
+    if (activeTargetElement) {
+        activeTargetElement.style.opacity = '1';
+    }
 
     lightboxCard.style.transition = 'none';
     lightboxCard.style.transform = 'none';
@@ -1293,8 +1293,8 @@ function closeLightboxFn() {
 
     void lightboxCard.offsetWidth;
 
-    lightboxCard.style.transition = 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
-    lightboxImgFront.style.transition = 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    lightboxCard.style.transition = 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    lightboxImgFront.style.transition = 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
     lightboxCard.style.top = `${endRect.top}px`;
     lightboxCard.style.left = `${endRect.left}px`;
@@ -1307,17 +1307,16 @@ function closeLightboxFn() {
     lightbox.classList.remove('active');
 
     setTimeout(() => {
-        if (activeTargetElement) {
-            activeTargetElement.style.opacity = '1';
-        }
         forceClose();
-    }, 500);
+        isTransitioning = false;
+    }, 400);
 }
 
 function forceClose() {
     document.body.style.position = '';
     document.body.style.top = '';
     document.body.style.width = '';
+    document.body.classList.remove('lightbox-open');
     window.scrollTo(0, scrollY);
 
     lightboxCard.style.transition = '';
@@ -1326,7 +1325,11 @@ function forceClose() {
     isSpinning = false;
     isDragging = false;
     hasDragged = false;
-    activeTargetElement = null;
+    
+    if (activeTargetElement) {
+        activeTargetElement.style.opacity = '1';
+        activeTargetElement = null;
+    }
 }
 
 closeLightbox.addEventListener('click', closeLightboxFn);

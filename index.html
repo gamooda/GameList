@@ -53,9 +53,16 @@ input[type=number] {
     --danger: #ef4444;
     --success: #10b981;
 }
+
+/* Предотвращает смещение контента при исчезновении скроллбара */
 html {
-    overflow-y: scroll; /* Фиксирует появление скроллбара, убирает дерганье по горизонтали */
+    scrollbar-gutter: stable;
 }
+html.lightbox-open, body.lightbox-open {
+    overflow: hidden !important;
+    height: 100vh !important;
+}
+
 body {
     background: var(--bg);
     color: var(--text);
@@ -64,10 +71,6 @@ body {
     flex-direction: column;
     align-items: center;
     padding: 24px 16px;
-    perspective: 1000px;
-}
-body.lightbox-open {
-    overflow: hidden; /* Отключает скролл, когда открыта картинка */
 }
 .app {
     max-width: 1000px;
@@ -227,7 +230,6 @@ h1 {
     flex-wrap: wrap;
 }
 
-/* GRID LAYOUT */
 .game-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -243,7 +245,6 @@ h1 {
     padding: 12px;
     display: flex;
     flex-direction: column;
-    /* Убрали transform на hover, чтобы не было тряски */
     transition: border-color 0.3s, box-shadow 0.3s;
     z-index: 1;
 }
@@ -273,7 +274,6 @@ h1 {
     gap: 8px;
     width: 100%;
 }
-/* Подсветка обложки при наведении */
 .game-cover {
     width: 100%;
     height: 200px;
@@ -281,7 +281,7 @@ h1 {
     object-fit: cover;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     cursor: pointer;
-    transition: transform 0.3s, box-shadow 0.3s;
+    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
     border: 2px solid transparent;
 }
 .game-cover:hover {
@@ -389,7 +389,6 @@ h1 {
     border-color: var(--primary);
     box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
     padding: 16px;
-    transform: none !important; /* Запрещаем любые трансформации в режиме редактирования */
 }
 .game-card.edit-mode .card-bg {
     filter: blur(30px) brightness(0.15);
@@ -538,38 +537,45 @@ h1 {
     opacity: 0;
     transition: opacity 0.3s ease;
     pointer-events: none;
-    z-index: 100;
+    z-index: 20000;
 }
 .toast.show {
     opacity: 1;
 }
 
+/* Lightbox */
 .lightbox {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 10000;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
     overflow: hidden;
-    perspective: 1200px;
 }
 .lightbox.active {
     opacity: 1;
     pointer-events: auto;
 }
 .lightbox-container {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
+    perspective: 1200px;
 }
 .lightbox-card {
     position: relative;
@@ -608,7 +614,7 @@ h1 {
     cursor: pointer;
     box-shadow: 0 4px 0 #0a0a0f, 0 6px 15px rgba(0,0,0,0.8);
     transition: all 0.1s;
-    z-index: 1001;
+    z-index: 10001;
     user-select: none;
     text-shadow: 0 1px 2px #000;
 }
@@ -1049,7 +1055,11 @@ gameList.addEventListener('click', function (e) {
             isSpinning = true;
             lightboxCard.style.transform = '';
             lightbox.classList.add('active');
-            document.body.classList.add('lightbox-open'); // Отключаем скролл фона
+            
+            // Блокируем скролл страницы жестко на html и body
+            document.documentElement.classList.add('lightbox-open');
+            document.body.classList.add('lightbox-open');
+            
             lastTime = performance.now();
             if (!spinAnimationId) spinAnimationId = requestAnimationFrame(spinLoop);
         }
@@ -1175,7 +1185,8 @@ window.addEventListener('mouseup', function() {
 
 function closeLightboxFn() {
     lightbox.classList.remove('active');
-    document.body.classList.remove('lightbox-open'); // Включаем скролл обратно
+    document.documentElement.classList.remove('lightbox-open');
+    document.body.classList.remove('lightbox-open');
     isSpinning = false;
     isDragging = false;
     hasDragged = false;

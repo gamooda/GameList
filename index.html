@@ -690,7 +690,6 @@ const closeLightbox = document.getElementById('closeLightbox');
 let games = [];
 let debounceTimer = null;
 
-// --- Переменные для 3D вращения ---
 let isDragging = false;
 let hasDragged = false;
 let previousMousePosition = { x: 0, y: 0 };
@@ -1113,21 +1112,22 @@ gameList.addEventListener('input', function (e) {
     }
 });
 
-// --- Логика 3D Превью ---
-
 function spinLoop(time) {
-    if (isSpinning && !isDragging && lightbox.classList.contains('active')) {
+    if (lightbox.classList.contains('active')) {
         const deltaTime = time - lastTime;
         lastTime = time;
-        
-        // Скорость вращения
-        currentRotation.y += deltaTime * 0.03;
-        if (currentRotation.y > 360) currentRotation.y -= 360;
-        
-        // Плавный наклон по X
-        const tiltX = Math.sin(currentRotation.y * Math.PI / 180) * 10;
-        
-        lightboxImg.style.transform = `rotateX(${tiltX}deg) rotateY(${currentRotation.y}deg)`;
+
+        if (isSpinning && !isDragging) {
+            // Продолжаем крутить
+            currentRotation.y += deltaTime * 0.03; 
+            if (currentRotation.y > 360) currentRotation.y -= 360;
+            
+            // Плавно выравниваем наклон по X обратно в красивый ритм, чтобы не было "сломанной" траектории
+            let targetTiltX = Math.sin(currentRotation.y * Math.PI / 180) * 10;
+            currentRotation.x += (targetTiltX - currentRotation.x) * 0.05;
+
+            lightboxImg.style.transform = `rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
+        }
     }
     spinAnimationId = requestAnimationFrame(spinLoop);
 }
@@ -1163,8 +1163,8 @@ window.addEventListener('mousemove', function(e) {
 window.addEventListener('mouseup', function() {
     if (isDragging) {
         isDragging = false;
-        // НЕ возвращаем авто-спин и НЕ сбрасываем позицию.
-        // Картинка остается там, где её оставил пользователь.
+        isSpinning = true; // ВОЗОБНОВЛЯЕМ ВРАЩЕНИЕ
+        lastTime = performance.now(); // Сбрасываем таймер, чтобы не было скачков
     }
 });
 
@@ -1189,7 +1189,6 @@ lightbox.addEventListener('click', function(e) {
     if (e.target === lightbox && !hasDragged) {
         closeLightboxFn();
     }
-    // Сбрасываем флаг после закрытия/клика, чтобы следующее открытие работало корректно
     setTimeout(() => { hasDragged = false; }, 100);
 });
 

@@ -522,6 +522,7 @@ h1 {
     opacity: 1;
 }
 
+/* Lightbox */
 .lightbox {
     position: fixed;
     inset: 0;
@@ -572,21 +573,36 @@ h1 {
     75% { transform: rotateY(270deg) rotateX(-10deg); }
     100% { transform: rotateY(360deg) rotateX(0deg); }
 }
-.close-lightbox {
+
+/* 3D ESC Button */
+.esc-btn {
     position: absolute;
-    top: 20px;
-    right: 30px;
-    color: #fff;
-    font-size: 40px;
-    font-weight: bold;
+    top: 30px;
+    right: 40px;
+    padding: 12px 24px;
+    background: linear-gradient(180deg, #3a3a4a, #1a1a22);
+    color: #c0c0d0;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 2px;
+    border: 1px solid #5a5a6e;
+    border-radius: 8px;
     cursor: pointer;
-    transition: color 0.2s, transform 0.2s;
-    line-height: 1;
+    box-shadow: 0 6px 0 #0a0a0f, 0 8px 20px rgba(0,0,0,0.8);
+    transition: all 0.1s;
     z-index: 1001;
+    user-select: none;
+    text-shadow: 0 1px 2px #000;
 }
-.close-lightbox:hover {
-    color: var(--danger);
-    transform: scale(1.1);
+.esc-btn:hover {
+    background: linear-gradient(180deg, #4a4a5a, #2a2a35);
+    color: #fff;
+    transform: translateY(2px);
+    box-shadow: 0 4px 0 #0a0a0f, 0 6px 15px rgba(0,0,0,0.8);
+}
+.esc-btn:active {
+    transform: translateY(6px);
+    box-shadow: 0 0px 0 #0a0a0f, 0 2px 5px rgba(0,0,0,0.8);
 }
 
 @media (max-width: 640px) {
@@ -622,6 +638,11 @@ h1 {
     .share-bar input {
         max-width: 100%;
     }
+    .esc-btn {
+        top: 15px;
+        right: 15px;
+        padding: 10px 18px;
+    }
 }
 </style>
 </head>
@@ -645,9 +666,9 @@ h1 {
 </div>
 
 <div class="lightbox" id="lightbox">
-    <span class="close-lightbox" id="closeLightbox">&times;</span>
+    <div class="esc-btn" id="closeLightbox">ESC</div>
     <div class="lightbox-container" id="lightboxContainer">
-        <img id="lightboxImg" src="" alt="Preview">
+        <img id="lightboxImg" src="" alt="Preview" draggable="false">
     </div>
 </div>
 
@@ -682,6 +703,7 @@ const closeLightbox = document.getElementById('closeLightbox');
 let games = [];
 let debounceTimer = null;
 let isDragging = false;
+let hasDragged = false;
 let previousMousePosition = { x: 0, y: 0 };
 let currentRotation = { x: 0, y: 0 };
 
@@ -1025,8 +1047,13 @@ gameList.addEventListener('click', function (e) {
         if (games[index] && games[index].background_image) {
             lightboxImg.src = games[index].background_image;
             currentRotation = { x: 0, y: 0 };
+            hasDragged = false;
+            lightboxImg.style.transition = 'none';
             lightboxImg.style.transform = '';
             lightbox.classList.add('active');
+            setTimeout(() => {
+                lightboxImg.style.transition = '';
+            }, 50);
         }
         return;
     }
@@ -1097,13 +1124,25 @@ gameList.addEventListener('input', function (e) {
 lightboxImg.addEventListener('mousedown', function(e) {
     e.preventDefault();
     isDragging = true;
+    hasDragged = false;
     lightbox.classList.add('dragging');
+    lightboxImg.style.transition = 'none';
     previousMousePosition = { x: e.clientX, y: e.clientY };
 });
 
 window.addEventListener('mouseup', function() {
-    isDragging = false;
-    lightbox.classList.remove('dragging');
+    if (isDragging) {
+        isDragging = false;
+        
+        lightboxImg.style.transition = 'transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1)';
+        lightboxImg.style.transform = 'rotateX(0deg) rotateY(0deg)';
+        
+        setTimeout(() => {
+            lightboxImg.style.transition = '';
+            lightboxImg.style.transform = '';
+            lightbox.classList.remove('dragging');
+        }, 600);
+    }
 });
 
 window.addEventListener('mousemove', function(e) {
@@ -1113,6 +1152,10 @@ window.addEventListener('mousemove', function(e) {
             y: e.clientY - previousMousePosition.y
         };
         
+        if (Math.abs(deltaMove.x) > 2 || Math.abs(deltaMove.y) > 2) {
+            hasDragged = true;
+        }
+
         currentRotation.y += deltaMove.x * 0.5;
         currentRotation.x -= deltaMove.y * 0.5;
         
@@ -1122,15 +1165,25 @@ window.addEventListener('mousemove', function(e) {
     }
 });
 
-closeLightbox.addEventListener('click', function() {
+function closeLightboxFn() {
     lightbox.classList.remove('active');
     lightbox.classList.remove('dragging');
+    lightboxImg.style.transition = '';
+    lightboxImg.style.transform = '';
+    currentRotation = { x: 0, y: 0 };
+}
+
+closeLightbox.addEventListener('click', closeLightboxFn);
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+        closeLightboxFn();
+    }
 });
 
 lightbox.addEventListener('click', function(e) {
-    if (e.target === lightbox) {
-        lightbox.classList.remove('active');
-        lightbox.classList.remove('dragging');
+    if (e.target === lightbox && !hasDragged) {
+        closeLightboxFn();
     }
 });
 

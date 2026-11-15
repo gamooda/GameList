@@ -222,197 +222,165 @@ h1 {
     color: var(--text-muted);
     flex-wrap: wrap;
 }
+
 .game-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 16px;
 }
 .game-card {
-    background: var(--panel);
-    border-radius: 6px;
-    padding: 6px 10px;
-    border: 1px solid var(--border);
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
-    z-index: 1;
-}
-.game-card::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: 8px;
-    background: var(--card-bg, transparent);
-    filter: blur(12px);
-    opacity: 0.15;
-    z-index: -1;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-}
-.game-card:hover::before {
-    opacity: 0.4;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 16px;
+    transition: transform 0.3s, box-shadow 0.3s;
 }
 .game-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     border-color: var(--border-light);
-    z-index: 2;
 }
-.game-card.edit-mode {
-    border-color: var(--primary);
-    padding: 12px;
-    gap: 12px;
-    background: #1a1a22;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    align-items: flex-start;
-    z-index: 5;
-}
-.game-card.edit-mode::before {
-    display: none;
-}
-.cover-wrapper {
-    width: 48px;
-    height: 64px;
-    flex-shrink: 0;
-    perspective: 600px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-}
-.game-cover {
-    width: 100%;
-    height: 100%;
-    border-radius: 4px;
-    object-fit: cover;
-    background: var(--bg);
-    transition: transform 0.1s ease-out, box-shadow 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-    cursor: pointer;
-    transform-style: preserve-3d;
-}
-.game-cover:hover {
-    box-shadow: 0 15px 30px rgba(0,0,0,0.8);
-}
-.game-card.edit-mode .cover-wrapper {
-    width: 80px;
-    height: 110px;
+.card-bg {
+    position: absolute;
+    inset: -20px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px) brightness(0.2);
+    z-index: 0;
     pointer-events: none;
+    transition: opacity 0.3s;
 }
-.game-card.edit-mode .game-cover {
-    transform: none !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+.game-card:hover .card-bg {
+    opacity: 1.2;
 }
-.game-body {
-    flex: 1;
-    min-width: 0;
+.card-content {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    transition: all 0.3s ease;
+    gap: 12px;
 }
-.game-card.edit-mode .game-body {
-    gap: 8px;
+.card-top {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+.game-cover {
+    width: 100px;
+    height: 140px;
+    border-radius: 8px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.game-cover:hover {
+    transform: scale(1.05);
 }
 .game-header {
+    flex: 1;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 4px;
+    flex-direction: column;
+    gap: 6px;
 }
 .game-title {
-    font-size: 13px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: font-size 0.3s ease;
+    line-height: 1.2;
 }
-.game-card.edit-mode .game-title {
-    font-size: 16px;
-    white-space: normal;
+.game-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
 }
 .badges-row {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     flex-wrap: wrap;
-    align-items: center;
+    margin-top: 4px;
 }
 .game-rating-badge {
-    background: #2a2a35;
+    background: rgba(255,255,255,0.1);
     color: #e0e0e0;
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
     font-weight: 600;
     white-space: nowrap;
-    border: 1px solid #3f3f4a;
 }
 .user-rating-badge {
     color: #fff;
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
     font-weight: 700;
     white-space: nowrap;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
-.game-meta {
+.card-bottom {
+    background: rgba(0,0,0,0.3);
+    padding: 12px;
+    border-radius: 8px;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 8px;
-    font-size: 10px;
-    color: var(--text-muted);
-    flex-wrap: wrap;
-}
-.user-time-badge {
-    color: #34d399;
-    font-weight: 600;
-    background: rgba(16, 185, 129, 0.1);
-    padding: 1px 3px;
-    border-radius: 2px;
 }
 .game-tags-view {
     display: flex;
     flex-wrap: wrap;
-    gap: 3px;
-    align-items: center;
+    gap: 4px;
 }
 .game-tag-view {
-    background: #23232b;
-    padding: 0px 4px;
-    border-radius: 3px;
-    font-size: 9px;
+    background: rgba(255,255,255,0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
     color: #b0b0c0;
-    border: 1px solid #2d2d38;
-    white-space: nowrap;
 }
 .game-notes-preview {
-    font-size: 10px;
-    color: #8a8a9d;
+    font-size: 12px;
+    color: #ccc;
     font-style: italic;
-    white-space: nowrap;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-    margin-top: 1px;
+}
+.card-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+}
+.user-time-badge {
+    color: #34d399;
+    font-weight: 600;
+    background: rgba(16, 185, 129, 0.15);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
 }
 .action-btn {
     background: transparent;
     border: 1px solid var(--border-light);
     color: var(--text-muted);
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-size: 10px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 11px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     white-space: nowrap;
 }
 .action-btn:hover {
-    background: #23232b;
+    background: rgba(255,255,255,0.1);
     color: var(--text);
 }
 .action-btn.delete:hover {
@@ -420,61 +388,55 @@ h1 {
     border-color: var(--danger);
     color: #fff;
 }
+.game-card.edit-mode {
+    border-color: var(--primary);
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
+}
+.game-card.edit-mode .card-bg {
+    filter: blur(30px) brightness(0.15);
+}
+.edit-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
 .edit-section {
     display: flex;
     flex-direction: column;
     gap: 4px;
-}
-.edit-row {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    align-items: flex-end;
 }
 .edit-label {
     font-size: 11px;
     color: var(--text-muted);
     font-weight: 600;
 }
-.user-playtime-input-wrapper {
-    display: flex;
-    align-items: center;
+.user-playtime-input {
     background: var(--bg);
     border: 1px solid var(--border-light);
     border-radius: 4px;
-    padding: 0 8px;
-    height: 24px;
-    transition: border-color 0.2s;
-}
-.user-playtime-input-wrapper:focus-within {
-    border-color: var(--primary);
-}
-.user-playtime-input {
-    width: 40px;
-    background: transparent;
-    border: none;
+    padding: 4px 8px;
     color: var(--text);
     font-size: 12px;
     outline: none;
+    width: 60px;
     text-align: center;
 }
-.user-playtime-input-wrapper span {
-    color: var(--text-muted);
-    font-size: 11px;
-    margin-left: 2px;
+.user-playtime-input:focus {
+    border-color: var(--primary);
 }
 .rating-picker {
     display: flex;
-    gap: 3px;
+    gap: 4px;
     flex-wrap: wrap;
 }
 .rating-btn {
-    width: 22px;
-    height: 22px;
-    border-radius: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
     border: 1px solid rgba(0,0,0,0.3);
     font-weight: 800;
-    font-size: 10px;
+    font-size: 11px;
     cursor: pointer;
     color: #fff;
     text-shadow: 0 1px 2px rgba(0,0,0,0.4);
@@ -495,20 +457,20 @@ h1 {
 .tags-picker {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 6px;
 }
 .tag-chip {
-    padding: 2px 6px;
-    border-radius: 12px;
-    background: #23232b;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.05);
     border: 1px solid var(--border-light);
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     cursor: pointer;
     transition: all 0.3s ease;
 }
 .tag-chip:hover {
-    background: #2d2d38;
+    background: rgba(255,255,255,0.1);
     color: var(--text);
 }
 .tag-chip.selected {
@@ -519,26 +481,27 @@ h1 {
 }
 .game-notes {
     width: 100%;
-    padding: 4px 8px;
+    padding: 6px 10px;
     border-radius: 4px;
     border: 1px solid var(--border-light);
-    background: var(--bg);
+    background: rgba(0,0,0,0.3);
     color: var(--text);
-    font-size: 11px;
+    font-size: 12px;
     resize: vertical;
-    min-height: 32px;
-    max-height: 80px;
+    min-height: 40px;
+    max-height: 100px;
     outline: none;
     transition: border-color 0.3s ease;
 }
 .game-notes:focus {
     border-color: var(--primary);
+    background: var(--bg);
 }
 .empty-state {
     text-align: center;
     color: var(--text-muted);
     padding: 48px 16px;
-    font-size: 14px;
+    font-size: 15px;
 }
 .toast {
     position: fixed;
@@ -643,27 +606,14 @@ h1 {
 
 @media (max-width: 640px) {
     .game-card {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 10px;
-    }
-    .cover-wrapper {
-        width: 100%;
-        height: 120px;
-        perspective: none;
+        padding: 12px;
     }
     .game-cover {
-        width: 100%;
-        height: 100%;
-        border-radius: 6px;
-        pointer-events: none;
+        width: 80px;
+        height: 110px;
     }
-    .game-header, .game-meta-row {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .badges-row {
-        margin-top: 4px;
+    .game-title {
+        font-size: 16px;
     }
     .edit-row {
         flex-direction: column;
@@ -728,7 +678,7 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v6';
+const STORAGE_KEY = 'game_tracker_games_v7';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
@@ -820,7 +770,7 @@ function renderGames() {
     
     gameList.innerHTML = games.map((game, index) => {
         const isEditing = game.isEditing;
-        const bgColor = game.background_image ? `url('${game.background_image}')` : 'none';
+        const bgImg = game.background_image ? `url('${game.background_image}')` : 'none';
         
         if (isEditing) {
             const ratingButtons = Array.from({length: 10}, (_, i) => {
@@ -836,45 +786,42 @@ function renderGames() {
 
             return `
                 <div class="game-card edit-mode" data-game-index="${index}">
-                    <div class="cover-wrapper">
-                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/80x110/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" draggable="false">
-                    </div>
-                    <div class="game-body">
-                        <div class="game-header">
-                            <div class="game-title">${escapeHtml(game.name)}</div>
-                            <div class="badges-row">
-                                <div class="game-rating-badge">⭐ Народная: ${game.rating || '—'}</div>
-                            </div>
-                        </div>
-                        <div class="game-meta">
-                            <span>⏱ HLTB: ${game.playtime ? game.playtime + ' ч' : '—'}</span>
-                            <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
-                        </div>
-                        
-                        <div class="edit-row">
-                            <div class="edit-section">
-                                <div class="edit-label">Ваша оценка:</div>
-                                <div class="rating-picker">${ratingButtons}</div>
-                            </div>
-                            <div class="edit-section">
-                                <div class="edit-label">Ваше время:</div>
-                                <div class="user-playtime-input-wrapper">
-                                    <input type="number" step="0.1" min="0" class="user-playtime-input" data-game-index="${index}" value="${game.userPlaytime || ''}" placeholder="0">
-                                    <span>ч</span>
+                    <div class="card-bg" style="background-image: ${bgImg}"></div>
+                    <div class="card-content">
+                        <div class="card-top">
+                            <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/100x140/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" draggable="false">
+                            <div class="game-header">
+                                <div class="game-title">${escapeHtml(game.name)}</div>
+                                <div class="game-meta">
+                                    <span>⏱ HLTB: ${game.playtime ? game.playtime + ' ч' : '—'}</span>
+                                    <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
+                                </div>
+                                <div class="badges-row">
+                                    <div class="game-rating-badge">⭐ Народная: ${game.rating || '—'}</div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="edit-section">
-                            <div class="edit-label">Теги:</div>
-                            <div class="tags-picker">${tagChips}</div>
-                        </div>
-
-                        <textarea class="game-notes" rows="1" placeholder="Краткое описание..." data-game-index="${index}">${escapeHtml(game.notes || '')}</textarea>
-                        
-                        <div class="game-actions" style="display:flex; gap:6px;">
-                            <button class="action-btn btn-success save-btn" data-game-index="${index}">Сохранить</button>
-                            <button class="action-btn delete delete-btn" data-game-index="${index}">Удалить</button>
+                        <div class="card-bottom">
+                            <div class="edit-row">
+                                <div class="edit-section">
+                                    <div class="edit-label">Оценка:</div>
+                                    <div class="rating-picker">${ratingButtons}</div>
+                                </div>
+                                <div class="edit-section">
+                                    <div class="edit-label">Время (ч):</div>
+                                    <input type="number" step="0.1" min="0" class="user-playtime-input" data-game-index="${index}" value="${game.userPlaytime || ''}" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="edit-section">
+                                <div class="edit-label">Теги:</div>
+                                <div class="tags-picker">${tagChips}</div>
+                            </div>
+                            <textarea class="game-notes" rows="2" placeholder="Что понравилось, краткое описание..." data-game-index="${index}">${escapeHtml(game.notes || '')}</textarea>
+                            
+                            <div class="game-actions" style="display:flex; gap:8px; margin-top: 4px;">
+                                <button class="action-btn btn-success save-btn" data-game-index="${index}">Сохранить</button>
+                                <button class="action-btn delete delete-btn" data-game-index="${index}">Удалить</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -886,34 +833,34 @@ function renderGames() {
             let timeStr = formatTime(game.userPlaytime);
             const userTimeHtml = timeStr ? `<span class="user-time-badge">⏱ Моё: ${timeStr}</span>` : '';
             
-            const notesPreview = game.notes ? `<div class="game-notes-preview">"${escapeHtml(game.notes)}"</div>` : '';
+            const notesPreview = game.notes ? `<div class="game-notes-preview">"${escapeHtml(game.notes)}"</div>` : '<div class="game-notes-preview" style="color: #555;">Нет описания</div>';
             
             return `
-                <div class="game-card" data-game-index="${index}" style="--card-bg: ${bgColor}">
-                    <div class="cover-wrapper">
-                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/48x64/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
-                    </div>
-                    <div class="game-body">
-                        <div class="game-header">
-                            <div class="game-title">${escapeHtml(game.name)}</div>
-                            <div class="badges-row">
-                                ${userRatingHtml}
-                                <div class="game-rating-badge">Народная: ${game.rating || '—'}</div>
+                <div class="game-card" data-game-index="${index}">
+                    <div class="card-bg" style="background-image: ${bgImg}"></div>
+                    <div class="card-content">
+                        <div class="card-top">
+                            <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/100x140/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
+                            <div class="game-header">
+                                <div class="game-title">${escapeHtml(game.name)}</div>
+                                <div class="game-meta">
+                                    <span>⏱ HLTB: ${game.playtime ? game.playtime + ' ч' : '—'}</span>
+                                    <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
+                                </div>
+                                <div class="badges-row">
+                                    ${userRatingHtml}
+                                    <div class="game-rating-badge">Народная: ${game.rating || '—'}</div>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="game-meta" style="justify-content: space-between;">
-                            <div style="display:flex; gap:6px; align-items:center;">
-                                <span>⏱ HLTB: ${game.playtime ? game.playtime + 'ч' : '—'}</span>
-                                ${userTimeHtml}
-                                <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
-                            </div>
-                            <div style="display:flex; gap:6px; align-items:center;">
-                                <div class="game-tags-view">${tagsHtml}</div>
+                        <div class="card-bottom">
+                            <div class="game-tags-view">${tagsHtml}</div>
+                            ${notesPreview}
+                            <div class="card-actions">
+                                <div>${userTimeHtml}</div>
                                 <button class="action-btn edit-btn" data-game-index="${index}">Изменить</button>
                             </div>
                         </div>
-                        ${notesPreview}
                     </div>
                 </div>
             `;
@@ -1060,7 +1007,7 @@ gameList.addEventListener('mousemove', function(e) {
     const rotateX = ((y - centerY) / centerY) * -25;
     const rotateY = ((x - centerX) / centerX) * 25;
     
-    cover.style.transform = `scale(1.4) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    cover.style.transform = `scale(1.1) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
 });
 
 gameList.addEventListener('mouseout', function(e) {

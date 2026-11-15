@@ -6,7 +6,6 @@
 <title>Game Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <style>
-/* Кастомный скроллбар */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -27,6 +26,10 @@
     margin: 0;
     padding: 0;
     font-family: system-ui, -apple-system, sans-serif;
+    user-select: none;
+}
+input, textarea {
+    user-select: text;
 }
 :root {
     --bg: #0f0f13;
@@ -89,7 +92,7 @@ h1 {
     min-width: 200px;
     max-width: 400px;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.3s ease;
 }
 .share-bar input:focus {
     border-color: var(--primary);
@@ -103,7 +106,7 @@ h1 {
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .btn:hover {
     background: #23232b;
@@ -119,6 +122,7 @@ h1 {
 .btn-primary:hover {
     filter: brightness(1.1);
     color: #fff;
+    transform: translateY(-1px);
 }
 .btn-success {
     background: var(--success);
@@ -127,6 +131,7 @@ h1 {
 }
 .btn-success:hover {
     background: #059669;
+    transform: translateY(-1px);
 }
 .search-section {
     position: relative;
@@ -141,7 +146,7 @@ h1 {
     color: var(--text);
     font-size: 15px;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.3s ease, background 0.3s ease;
 }
 .search-input:focus {
     border-color: var(--primary);
@@ -171,7 +176,7 @@ h1 {
     cursor: pointer;
     border-bottom: 1px solid var(--border);
     align-items: center;
-    transition: background 0.15s;
+    transition: background 0.2s ease;
 }
 .suggestion-item:last-child {
     border-bottom: none;
@@ -220,7 +225,7 @@ h1 {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .game-card:hover {
     border-color: var(--border-light);
@@ -239,7 +244,7 @@ h1 {
     object-fit: cover;
     background: var(--bg);
     flex-shrink: 0;
-    transition: all 0.3s ease;
+    transition: all 0.4s ease;
 }
 .game-card.edit-mode .game-cover {
     width: 140px;
@@ -252,7 +257,7 @@ h1 {
     flex-direction: column;
     justify-content: center;
     gap: 6px;
-    transition: all 0.3s ease;
+    transition: all 0.4s ease;
 }
 .game-card.edit-mode .game-body {
     justify-content: flex-start;
@@ -269,7 +274,7 @@ h1 {
     font-size: 16px;
     font-weight: 700;
     color: var(--text);
-    transition: font-size 0.3s ease;
+    transition: font-size 0.4s ease;
 }
 .game-card.edit-mode .game-title {
     font-size: 20px;
@@ -339,7 +344,7 @@ h1 {
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
 }
 .action-btn:hover {
     background: #23232b;
@@ -375,17 +380,19 @@ h1 {
     cursor: pointer;
     color: #fff;
     text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-    transition: transform 0.1s, box-shadow 0.1s, filter 0.2s;
-    opacity: 0.8;
+    transition: transform 0.2s, box-shadow 0.2s, filter 0.2s, opacity 0.2s;
+    opacity: 0.6;
 }
 .rating-btn:hover {
     transform: scale(1.1);
     opacity: 1;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 .rating-btn.active {
     opacity: 1;
-    box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--primary);
-    transform: scale(1.1);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9), 0 4px 10px rgba(0,0,0,0.4);
+    transform: scale(1.15);
+    z-index: 1;
 }
 .tags-picker {
     display: flex;
@@ -400,8 +407,7 @@ h1 {
     color: var(--text-muted);
     font-size: 12px;
     cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
+    transition: all 0.3s ease;
 }
 .tag-chip:hover {
     background: #2d2d38;
@@ -425,7 +431,7 @@ h1 {
     min-height: 60px;
     max-height: 150px;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.3s ease;
 }
 .game-notes:focus {
     border-color: var(--primary);
@@ -450,7 +456,7 @@ h1 {
     font-size: 13px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.6);
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.3s ease;
     pointer-events: none;
     z-index: 100;
 }
@@ -498,7 +504,6 @@ h1 {
         <div class="share-bar">
             <input type="text" id="shareLinkInput" placeholder="Ссылка для друга" readonly>
             <button class="btn btn-primary" id="copyShareBtn">Копировать</button>
-            <button class="btn btn-primary" id="generateShareBtn">Обновить</button>
         </div>
     </header>
 
@@ -521,7 +526,6 @@ const PRESET_TAGS = [
     "Хоррор", "RPG", "Шутер", "Песочница", "Инди"
 ];
 
-// Мягкие, благородные цвета от красного к изумрудному
 const RATING_COLORS = [
     '', 
     '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', 
@@ -535,7 +539,6 @@ const gameList = document.getElementById('gameList');
 const emptyState = document.getElementById('emptyState');
 const shareLinkInput = document.getElementById('shareLinkInput');
 const copyShareBtn = document.getElementById('copyShareBtn');
-const generateShareBtn = document.getElementById('generateShareBtn');
 const toast = document.getElementById('toast');
 
 let games = [];
@@ -878,17 +881,14 @@ gameList.addEventListener('input', function (e) {
 });
 
 copyShareBtn.addEventListener('click', function () {
+    generateShareLink();
     if (!shareLinkInput.value) {
-        generateShareLink();
+        showToast('Список пуст');
+        return;
     }
     shareLinkInput.select();
     document.execCommand('copy');
     showToast('Ссылка скопирована!');
-});
-
-generateShareBtn.addEventListener('click', function () {
-    generateShareLink();
-    showToast('Ссылка обновлена');
 });
 
 window.addEventListener('hashchange', loadFromHash);

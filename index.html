@@ -376,6 +376,17 @@ h1 {
     color: #fff;
 }
 
+/* Скрытая кнопка "Изменить" */
+.edit-btn {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, background 0.3s ease, color 0.3s ease;
+}
+.game-card:hover .edit-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 /* Edit Mode */
 .game-card.edit-mode {
     grid-column: 1 / -1;
@@ -536,7 +547,7 @@ h1 {
     opacity: 1;
 }
 
-/* Lightbox Base */
+/* Lightbox */
 .lightbox {
     position: fixed;
     top: 0;
@@ -719,6 +730,7 @@ let isSpinning = true;
 let spinAnimationId;
 let lastTime = performance.now();
 let scrollY = 0;
+let activeTargetElement = null;
 
 function formatTime(val) {
     if (!val) return '';
@@ -1113,6 +1125,7 @@ gameList.addEventListener('input', function (e) {
 });
 
 function openLightbox(index, targetElement) {
+    activeTargetElement = targetElement;
     const imgUrl = games[index].background_image;
     lightboxImgFront.src = imgUrl;
     lightboxImgBack.src = imgUrl;
@@ -1122,9 +1135,11 @@ function openLightbox(index, targetElement) {
     document.body.style.top = `-${scrollY}px`;
     document.body.style.width = '100%';
     
+    // Скрываем оригинальную картинку, чтобы она не просвечивала
+    targetElement.style.opacity = '0';
+    
     lightbox.classList.add('active');
     
-    // FLIP Animation
     const startRect = targetElement.getBoundingClientRect();
     
     requestAnimationFrame(() => {
@@ -1218,18 +1233,56 @@ window.addEventListener('mouseup', function() {
 });
 
 function closeLightboxFn() {
+    if (!activeTargetElement) {
+        forceClose();
+        return;
+    }
+
+    const startRect = lightboxImgFront.getBoundingClientRect();
+    const endRect = activeTargetElement.getBoundingClientRect();
+
+    const scaleX = endRect.width / startRect.width;
+    const scaleY = endRect.height / startRect.height;
+
+    const centerX = startRect.left + startRect.width / 2;
+    const centerY = startRect.top + startRect.height / 2;
+
+    const targetCenterX = endRect.left + endRect.width / 2;
+    const targetCenterY = endRect.top + endRect.height / 2;
+
+    const deltaX = targetCenterX - centerX;
+    const deltaY = targetCenterY - centerY;
+
+    isSpinning = false;
+    isDragging = false;
+    hasDragged = false;
+
+    lightboxCard.style.transition = 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
+    lightboxCard.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(${scaleX})`;
+
     lightbox.classList.remove('active');
-    
+
+    setTimeout(() => {
+        if (activeTargetElement) {
+            activeTargetElement.style.opacity = '1';
+        }
+        forceClose();
+    }, 500);
+}
+
+function forceClose() {
     document.body.style.position = '';
     document.body.style.top = '';
     document.body.style.width = '';
     window.scrollTo(0, scrollY);
-    
+
+    lightboxCard.style.transition = '';
+    lightboxCard.style.transform = '';
+    currentRotation = { x: 0, y: 0 };
     isSpinning = false;
     isDragging = false;
     hasDragged = false;
-    lightboxCard.style.transform = '';
-    currentRotation = { x: 0, y: 0 };
+    activeTargetElement = null;
 }
 
 closeLightbox.addEventListener('click', closeLightboxFn);

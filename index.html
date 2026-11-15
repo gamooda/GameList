@@ -447,33 +447,7 @@ h1 {
 <div class="toast" id="toast">Ссылка скопирована!</div>
 
 <script>
-const GAME_DATABASE = [
-    { id: 3498, name: "Grand Theft Auto V", background_image: "https://media.rawg.io/media/games/20a/20aa03a10cda45239fe22d035c0ebe64.jpg", rating: 4.47, playtime: 74, released: "2013-09-17" },
-    { id: 3328, name: "The Witcher 3: Wild Hunt", background_image: "https://media.rawg.io/media/games/618/618c2031a07bbff6b4f611f10b6bcdbc.jpg", rating: 4.66, playtime: 46, released: "2015-05-18" },
-    { id: 4200, name: "Portal 2", background_image: "https://media.rawg.io/media/games/328/3283617cb7d75d67257fc58339188742.jpg", rating: 4.61, playtime: 11, released: "2011-04-18" },
-    { id: 5286, name: "BioShock", background_image: "https://media.rawg.io/media/games/bc0/bc06a29ceac58652b684deefe7d56099.jpg", rating: 4.37, playtime: 14, released: "2007-08-21" },
-    { id: 13536, name: "Portal", background_image: "https://media.rawg.io/media/games/328/3283617cb7d75d67257fc58339188742.jpg", rating: 4.36, playtime: 4, released: "2007-10-09" },
-    { id: 12020, name: "Half-Life 2", background_image: "https://media.rawg.io/media/games/b8c/b8c243eaa43519f2e1a73f7e02a51b18.jpg", rating: 4.48, playtime: 12, released: "2004-11-16" },
-    { id: 58714, name: "Cyberpunk 2077", background_image: "https://media.rawg.io/media/games/26d/26d4437715bee60138dab4a7c8c59c92.jpg", rating: 4.12, playtime: 65, released: "2020-12-10" },
-    { id: 326243, name: "Elden Ring", background_image: "https://media.rawg.io/media/games/b29/b294fdd866dcdb86a8c8c0e4d4b5e3e6.jpg", rating: 4.75, playtime: 80, released: "2022-02-25" },
-    { id: 5679, name: "The Elder Scrolls V: Skyrim", background_image: "https://media.rawg.io/media/games/7cf/7cfc9220b401b7a300e409e539c9afd5.jpg", rating: 4.42, playtime: 60, released: "2011-11-11" },
-    { id: 3439, name: "Red Dead Redemption 2", background_image: "https://media.rawg.io/media/games/511/5118aff5091cb3efec399c808f8c598f.jpg", rating: 4.58, playtime: 85, released: "2018-10-26" },
-    { id: 41494, name: "God of War", background_image: "https://media.rawg.io/media/games/4be/4be6a6ad0364751a96229c56bf69be59.jpg", rating: 4.59, playtime: 30, released: "2018-04-20" },
-    { id: 39761, name: "Dark Souls III", background_image: "https://media.rawg.io/media/games/582/582b0e805340ea1e5c71e01d4291f99c.jpg", rating: 4.47, playtime: 40, released: "2016-03-24" },
-    { id: 278, name: "The Witcher 2: Assassins of Kings", background_image: "https://media.rawg.io/media/games/8bd/8bda6dce51b1f3b7b4b0e5e3d3e3d3e3.jpg", rating: 4.29, playtime: 25, released: "2011-05-16" },
-    { id: 9882, name: "Mass Effect 2", background_image: "https://media.rawg.io/media/games/67f/67f62d1f062a6164f57575e0604ee9f6.jpg", rating: 4.55, playtime: 30, released: "2010-01-26" },
-    { id: 23037, name: "Bloodborne", background_image: "https://media.rawg.io/media/games/2c2/2c2a2d4b4e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.65, playtime: 45, released: "2015-03-24" },
-    { id: 10213, name: "Batman: Arkham City", background_image: "https://media.rawg.io/media/games/6e0/6e0d3c2d4e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.48, playtime: 25, released: "2011-10-18" },
-    { id: 4286, name: "Hollow Knight", background_image: "https://media.rawg.io/media/games/4cf/4cfc6b7f1850590a4634b08bfab308ab.jpg", rating: 4.65, playtime: 25, released: "2017-02-24" },
-    { id: 274, name: "Dishonored", background_image: "https://media.rawg.io/media/games/4e6/4e6e8e1e5e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.32, playtime: 12, released: "2012-10-09" },
-    { id: 3070, name: "Fallout: New Vegas", background_image: "https://media.rawg.io/media/games/99b/99bf4b4f1d3d3d3d3d3d3d3d3d3d3d3d.jpg", rating: 4.49, playtime: 50, released: "2010-10-19" },
-    { id: 11910, name: "Hades", background_image: "https://media.rawg.io/media/games/1f4/1f4d2e7e5e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.64, playtime: 20, released: "2020-09-17" },
-    { id: 12210, name: "The Last of Us", background_image: "https://media.rawg.io/media/games/2f8/2f8c7a8b7b7b7b7b7b7b7b7b7b7b7b7b.jpg", rating: 4.62, playtime: 15, released: "2013-06-14" },
-    { id: 4301, name: "Doom (2016)", background_image: "https://media.rawg.io/media/games/4e6/4e6e5e5e5e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.44, playtime: 12, released: "2016-05-13" },
-    { id: 2850, name: "Sekiro: Shadows Die Twice", background_image: "https://media.rawg.io/media/games/69f/69f5b3e5e5e5e5e5e5e5e5e5e5e5e5e5.jpg", rating: 4.63, playtime: 30, released: "2019-03-22" },
-    { id: 10243, name: "Dark Souls", background_image: "https://media.rawg.io/media/games/5e5/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e.jpg", rating: 4.45, playtime: 35, released: "2011-09-22" }
-];
-
+let GAME_DATABASE = [];
 const STORAGE_KEY = 'game_tracker_games_v2';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
@@ -486,6 +460,21 @@ const toast = document.getElementById('toast');
 
 let games = [];
 let debounceTimer = null;
+
+async function initDatabase() {
+    try {
+        const response = await fetch('hltb_games.json');
+        if (!response.ok) throw new Error('Network response was not ok');
+        GAME_DATABASE = await response.json();
+        console.log(`База данных загружена: ${GAME_DATABASE.length} игр`);
+        searchInput.placeholder = `Поиск среди ${GAME_DATABASE.length} игр...`;
+    } catch (error) {
+        console.error('Ошибка загрузки базы:', error);
+        showToast('Ошибка загрузки базы. Открой через Live Server.');
+        searchInput.placeholder = 'Ошибка загрузки базы данных';
+        searchInput.disabled = true;
+    }
+}
 
 function loadGames() {
     try {
@@ -591,7 +580,17 @@ function searchLocalGames(query) {
         suggestionsBox.innerHTML = '';
         return;
     }
-    const filtered = GAME_DATABASE.filter(g => g.name.toLowerCase().includes(query.toLowerCase())).slice(0, 6);
+    
+    const lowerQuery = query.toLowerCase();
+    const filtered = [];
+    
+    for (let i = 0; i < GAME_DATABASE.length; i++) {
+        const game = GAME_DATABASE[i];
+        if (game.name && game.name.toLowerCase().includes(lowerQuery)) {
+            filtered.push(game);
+            if (filtered.length >= 10) break;
+        }
+    }
     
     if (filtered.length === 0) {
         suggestionsBox.innerHTML = '<div style="padding:16px;color:var(--text-muted);text-align:center;">Ничего не найдено</div>';
@@ -608,7 +607,7 @@ function searchLocalGames(query) {
             playtime: game.playtime,
             released: game.released
         }).replace(/'/g, "&#39;")}'>
-            <img src="${game.background_image || 'https://via.placeholder.com/56x56/1f1f23/efeff1?text=?'}" alt="${escapeHtml(game.name)}">
+            <img src="${game.background_image || 'https://via.placeholder.com/56x56/1f1f23/efeff1?text=?'}" alt="${escapeHtml(game.name)}" loading="lazy">
             <div class="suggestion-info">
                 <h4>${escapeHtml(game.name)}</h4>
                 <div class="suggestion-meta">
@@ -766,6 +765,7 @@ loadGames();
 loadFromHash();
 renderGames();
 generateShareLink();
+initDatabase();
 </script>
 </body>
 </html>

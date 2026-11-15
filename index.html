@@ -522,7 +522,6 @@ h1 {
     opacity: 1;
 }
 
-/* Lightbox */
 .lightbox {
     position: fixed;
     inset: 0;
@@ -558,23 +557,11 @@ h1 {
     box-shadow: 0 20px 60px rgba(0,0,0,0.9);
     transform-style: preserve-3d;
     cursor: grab;
-    animation: autoSpin 15s linear infinite;
 }
 .lightbox img:active {
     cursor: grabbing;
 }
-.lightbox.dragging img {
-    animation: none;
-}
-@keyframes autoSpin {
-    0% { transform: rotateY(0deg) rotateX(0deg); }
-    25% { transform: rotateY(90deg) rotateX(10deg); }
-    50% { transform: rotateY(180deg) rotateX(0deg); }
-    75% { transform: rotateY(270deg) rotateX(-10deg); }
-    100% { transform: rotateY(360deg) rotateX(0deg); }
-}
 
-/* 3D ESC Button */
 .esc-btn {
     position: absolute;
     top: 30px;
@@ -702,10 +689,15 @@ const closeLightbox = document.getElementById('closeLightbox');
 
 let games = [];
 let debounceTimer = null;
+
+// --- Переменные для 3D вращения ---
 let isDragging = false;
 let hasDragged = false;
 let previousMousePosition = { x: 0, y: 0 };
 let currentRotation = { x: 0, y: 0 };
+let isSpinning = true;
+let spinAnimationId;
+let lastTime = performance.now();
 
 function formatTime(val) {
     if (!val) return '';
@@ -790,7 +782,7 @@ function renderGames() {
             return `
                 <div class="game-card edit-mode" data-game-index="${index}">
                     <div class="cover-wrapper">
-                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/100x100/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}">
+                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/100x100/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" draggable="false">
                     </div>
                     <div class="game-body">
                         <div class="game-header">
@@ -841,7 +833,7 @@ function renderGames() {
             return `
                 <div class="game-card" data-game-index="${index}">
                     <div class="cover-wrapper">
-                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/64x64/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}">
+                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/64x64/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
                     </div>
                     <div class="game-body">
                         <div class="game-header">
@@ -1048,12 +1040,12 @@ gameList.addEventListener('click', function (e) {
             lightboxImg.src = games[index].background_image;
             currentRotation = { x: 0, y: 0 };
             hasDragged = false;
-            lightboxImg.style.transition = 'none';
+            isDragging = false;
+            isSpinning = true;
             lightboxImg.style.transform = '';
             lightbox.classList.add('active');
-            setTimeout(() => {
-                lightboxImg.style.transition = '';
-            }, 50);
+            lastTime = performance.now();
+            if (!spinAnimationId) spinAnimationId = requestAnimationFrame(spinLoop);
         }
         return;
     }
@@ -1121,28 +1113,31 @@ gameList.addEventListener('input', function (e) {
     }
 });
 
+// --- Логика 3D Превью ---
+
+function spinLoop(time) {
+    if (isSpinning && !isDragging && lightbox.classList.contains('active')) {
+        const deltaTime = time - lastTime;
+        lastTime = time;
+        
+        // Скорость вращения
+        currentRotation.y += deltaTime * 0.03;
+        if (currentRotation.y > 360) currentRotation.y -= 360;
+        
+        // Плавный наклон по X
+        const tiltX = Math.sin(currentRotation.y * Math.PI / 180) * 10;
+        
+        lightboxImg.style.transform = `rotateX(${tiltX}deg) rotateY(${currentRotation.y}deg)`;
+    }
+    spinAnimationId = requestAnimationFrame(spinLoop);
+}
+
 lightboxImg.addEventListener('mousedown', function(e) {
     e.preventDefault();
     isDragging = true;
+    isSpinning = false;
     hasDragged = false;
-    lightbox.classList.add('dragging');
-    lightboxImg.style.transition = 'none';
     previousMousePosition = { x: e.clientX, y: e.clientY };
-});
-
-window.addEventListener('mouseup', function() {
-    if (isDragging) {
-        isDragging = false;
-        
-        lightboxImg.style.transition = 'transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1)';
-        lightboxImg.style.transform = 'rotateX(0deg) rotateY(0deg)';
-        
-        setTimeout(() => {
-            lightboxImg.style.transition = '';
-            lightboxImg.style.transform = '';
-            lightbox.classList.remove('dragging');
-        }, 600);
-    }
 });
 
 window.addEventListener('mousemove', function(e) {
@@ -1165,10 +1160,19 @@ window.addEventListener('mousemove', function(e) {
     }
 });
 
+window.addEventListener('mouseup', function() {
+    if (isDragging) {
+        isDragging = false;
+        // НЕ возвращаем авто-спин и НЕ сбрасываем позицию.
+        // Картинка остается там, где её оставил пользователь.
+    }
+});
+
 function closeLightboxFn() {
     lightbox.classList.remove('active');
-    lightbox.classList.remove('dragging');
-    lightboxImg.style.transition = '';
+    isSpinning = false;
+    isDragging = false;
+    hasDragged = false;
     lightboxImg.style.transform = '';
     currentRotation = { x: 0, y: 0 };
 }
@@ -1185,6 +1189,8 @@ lightbox.addEventListener('click', function(e) {
     if (e.target === lightbox && !hasDragged) {
         closeLightboxFn();
     }
+    // Сбрасываем флаг после закрытия/клика, чтобы следующее открытие работало корректно
+    setTimeout(() => { hasDragged = false; }, 100);
 });
 
 copyShareBtn.addEventListener('click', function () {
@@ -1199,6 +1205,9 @@ copyShareBtn.addEventListener('click', function () {
 });
 
 window.addEventListener('hashchange', loadFromHash);
+
+// Запускаем цикл анимации
+spinAnimationId = requestAnimationFrame(spinLoop);
 
 initDatabase();
 </script>

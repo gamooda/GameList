@@ -387,30 +387,70 @@ h1 {
     pointer-events: auto;
 }
 
-/* Edit Mode */
-.game-card.edit-mode {
-    grid-column: 1 / -1;
-    border-color: var(--primary);
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
-    padding: 16px;
+/* Modal */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 15000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
 }
-.game-card.edit-mode .card-bg {
-    filter: blur(30px) brightness(0.15);
+.modal.active {
+    opacity: 1;
+    pointer-events: auto;
 }
-.game-card.edit-mode .game-cover {
-    height: 150px;
-    cursor: default;
-    border-color: transparent;
+.modal-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
-.game-card.edit-mode .game-cover:hover {
-    transform: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+.modal-content {
+    position: relative;
+    z-index: 1;
+    background: var(--panel);
+    width: 90%;
+    max-width: 600px;
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    transform: translateY(20px) scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    max-height: 90vh;
+    overflow-y: auto;
 }
+.modal.active .modal-content {
+    transform: translateY(0) scale(1);
+}
+
 .edit-container {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-top: 8px;
+    gap: 16px;
+}
+.edit-header {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.edit-header img {
+    width: 80px;
+    height: 110px;
+    border-radius: 8px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.edit-header h2 {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.2;
 }
 .edit-row {
     display: flex;
@@ -448,12 +488,12 @@ h1 {
     flex-wrap: wrap;
 }
 .rating-btn {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     border-radius: 4px;
     border: 1px solid rgba(0,0,0,0.3);
     font-weight: 800;
-    font-size: 12px;
+    font-size: 13px;
     cursor: pointer;
     color: #fff;
     text-shadow: 0 1px 2px rgba(0,0,0,0.4);
@@ -481,7 +521,7 @@ h1 {
     background: rgba(255,255,255,0.05);
     border: 1px solid var(--border-light);
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
 }
@@ -497,15 +537,15 @@ h1 {
 }
 .game-notes {
     width: 100%;
-    padding: 10px;
-    border-radius: 6px;
+    padding: 12px;
+    border-radius: 8px;
     border: 1px solid var(--border-light);
     background: rgba(0,0,0,0.3);
     color: var(--text);
-    font-size: 13px;
+    font-size: 14px;
     resize: vertical;
-    min-height: 60px;
-    max-height: 150px;
+    min-height: 80px;
+    max-height: 200px;
     outline: none;
     transition: border-color 0.3s ease;
 }
@@ -516,7 +556,7 @@ h1 {
 .edit-actions {
     display: flex;
     gap: 12px;
-    margin-top: 4px;
+    margin-top: 8px;
 }
 .empty-state {
     text-align: center;
@@ -679,6 +719,11 @@ h1 {
     <div class="empty-state" id="emptyState">Пока нет пройденных игр. Найдите игру через поиск выше.</div>
 </div>
 
+<div class="modal" id="editModal">
+    <div class="modal-bg" id="modalBg"></div>
+    <div class="modal-content" id="modalContent"></div>
+</div>
+
 <div class="lightbox" id="lightbox">
     <div class="esc-btn" id="closeLightbox">ESC</div>
     <div class="lightbox-container">
@@ -705,7 +750,7 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v14';
+const STORAGE_KEY = 'game_tracker_games_v15';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
@@ -713,6 +758,9 @@ const emptyState = document.getElementById('emptyState');
 const shareLinkInput = document.getElementById('shareLinkInput');
 const copyShareBtn = document.getElementById('copyShareBtn');
 const toast = document.getElementById('toast');
+const editModal = document.getElementById('editModal');
+const modalBg = document.getElementById('modalBg');
+const modalContent = document.getElementById('modalContent');
 const lightbox = document.getElementById('lightbox');
 const lightboxCard = document.getElementById('lightboxCard');
 const lightboxImgFront = document.getElementById('lightboxImgFront');
@@ -721,6 +769,7 @@ const closeLightbox = document.getElementById('closeLightbox');
 
 let games = [];
 let debounceTimer = null;
+let editingGameIndex = null;
 
 let isDragging = false;
 let hasDragged = false;
@@ -795,102 +844,117 @@ function renderGames() {
     emptyState.style.display = 'none';
     
     gameList.innerHTML = games.map((game, index) => {
-        const isEditing = game.isEditing;
         const bgImg = game.background_image ? `url('${game.background_image}')` : 'none';
         
-        if (isEditing) {
-            const ratingButtons = Array.from({length: 10}, (_, i) => {
-                const val = i + 1;
-                const isActive = game.userRating === val;
-                return `<button class="rating-btn ${isActive ? 'active' : ''}" style="background: ${RATING_COLORS[val]}" data-game-index="${index}" data-val="${val}">${val}</button>`;
-            }).join('');
-            
-            const tagChips = PRESET_TAGS.map(tag => {
-                const isSelected = game.tags && game.tags.includes(tag);
-                return `<div class="tag-chip ${isSelected ? 'selected' : ''}" data-game-index="${index}" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</div>`;
-            }).join('');
-
-            const totalPlaytime = game.userPlaytime || 0;
-            const hoursVal = Math.floor(totalPlaytime);
-            const minsVal = Math.round((totalPlaytime - hoursVal) * 60);
-
-            return `
-                <div class="game-card edit-mode" data-game-index="${index}">
-                    <div class="card-bg" style="background-image: ${bgImg}"></div>
-                    <div class="card-content">
-                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/400x200/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" draggable="false">
-                        <div class="game-title">${escapeHtml(game.name)}</div>
-                        
-                        <div class="edit-container">
-                            <div class="edit-row">
-                                <div class="edit-section">
-                                    <div class="edit-label">Ваша оценка:</div>
-                                    <div class="rating-picker">${ratingButtons}</div>
-                                </div>
-                                <div class="edit-section">
-                                    <div class="edit-label">Время (ч / мин):</div>
-                                    <div style="display:flex; gap:4px; align-items:center;">
-                                        <input type="number" step="1" min="0" class="user-playtime-input" data-game-index="${index}" data-type="h" value="${hoursVal}" placeholder="0">
-                                        <span style="color:var(--text-muted); font-size:12px;">ч</span>
-                                        <input type="number" step="1" min="0" max="59" class="user-playtime-input" data-game-index="${index}" data-type="m" value="${minsVal}" placeholder="0">
-                                        <span style="color:var(--text-muted); font-size:12px;">м</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="edit-section">
-                                <div class="edit-label">Теги:</div>
-                                <div class="tags-picker">${tagChips}</div>
-                            </div>
-                            <textarea class="game-notes" rows="2" placeholder="Что понравилось, краткое описание..." data-game-index="${index}">${escapeHtml(game.notes || '')}</textarea>
-                            <div class="edit-actions">
-                                <button class="action-btn btn-success save-btn" data-game-index="${index}">Сохранить</button>
-                                <button class="action-btn delete delete-btn" data-game-index="${index}">Удалить</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else {
-            const tagsHtml = (game.tags || []).map(tag => `<span class="game-tag-view">${escapeHtml(tag)}</span>`).join('');
-            const userRatingHtml = game.userRating ? `<div class="user-rating-badge" style="background: ${RATING_COLORS[game.userRating]}">⭐ ${game.userRating} / 10</div>` : '';
-            
-            let timeStr = '';
-            if (game.userPlaytime) {
-                const h = Math.floor(game.userPlaytime);
-                const m = Math.round((game.userPlaytime - h) * 60);
-                timeStr = formatTime(h, m);
-            }
-            const userTimeHtml = timeStr ? `<span class="user-time-badge">⏱ Моё: ${timeStr}</span>` : '';
-            
-            const notesPreview = game.notes ? `<div class="notes-preview">"${escapeHtml(game.notes)}"</div>` : '';
-            
-            return `
-                <div class="game-card" data-game-index="${index}">
-                    <div class="card-bg" style="background-image: ${bgImg}"></div>
-                    <div class="card-content">
-                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/400x200/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
-                        <div class="game-title">${escapeHtml(game.name)}</div>
-                        
-                        <div class="meta-row">
-                            <div class="meta-left">
-                                <span>⏱ HLTB: ${game.playtime ? game.playtime + ' ч' : '—'}</span>
-                                ${userTimeHtml}
-                                <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
-                            </div>
-                            <div class="meta-right">
-                                ${userRatingHtml}
-                                <div class="game-rating-badge">Народная: ${game.rating || '—'}</div>
-                                <button class="action-btn edit-btn" data-game-index="${index}">Изменить</button>
-                            </div>
-                        </div>
-                        
-                        <div class="game-tags-view">${tagsHtml}</div>
-                        ${notesPreview}
-                    </div>
-                </div>
-            `;
+        const tagsHtml = (game.tags || []).map(tag => `<span class="game-tag-view">${escapeHtml(tag)}</span>`).join('');
+        const userRatingHtml = game.userRating ? `<div class="user-rating-badge" style="background: ${RATING_COLORS[game.userRating]}">⭐ ${game.userRating} / 10</div>` : '';
+        
+        let timeStr = '';
+        if (game.userPlaytime) {
+            const h = Math.floor(game.userPlaytime);
+            const m = Math.round((game.userPlaytime - h) * 60);
+            timeStr = formatTime(h, m);
         }
+        const userTimeHtml = timeStr ? `<span class="user-time-badge">⏱ Моё: ${timeStr}</span>` : '';
+        
+        const notesPreview = game.notes ? `<div class="notes-preview">"${escapeHtml(game.notes)}"</div>` : '';
+        
+        return `
+            <div class="game-card" data-game-index="${index}">
+                <div class="card-bg" style="background-image: ${bgImg}"></div>
+                <div class="card-content">
+                    <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/400x200/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
+                    <div class="game-title">${escapeHtml(game.name)}</div>
+                    
+                    <div class="meta-row">
+                        <div class="meta-left">
+                            <span>⏱ HLTB: ${game.playtime ? game.playtime + ' ч' : '—'}</span>
+                            ${userTimeHtml}
+                            <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
+                        </div>
+                        <div class="meta-right">
+                            ${userRatingHtml}
+                            <div class="game-rating-badge">Народная: ${game.rating || '—'}</div>
+                            <button class="action-btn edit-btn" data-index="${index}">Изменить</button>
+                        </div>
+                    </div>
+                    
+                    <div class="game-tags-view">${tagsHtml}</div>
+                    ${notesPreview}
+                </div>
+            </div>
+        `;
     }).join('');
+}
+
+function renderEditModal() {
+    if (editingGameIndex === null) return;
+    const game = games[editingGameIndex];
+    
+    const ratingButtons = Array.from({length: 10}, (_, i) => {
+        const val = i + 1;
+        const isActive = game.userRating === val;
+        return `<button class="rating-btn ${isActive ? 'active' : ''}" style="background: ${RATING_COLORS[val]}" data-val="${val}">${val}</button>`;
+    }).join('');
+    
+    const tagChips = PRESET_TAGS.map(tag => {
+        const isSelected = game.tags && game.tags.includes(tag);
+        return `<div class="tag-chip ${isSelected ? 'selected' : ''}" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</div>`;
+    }).join('');
+
+    const totalPlaytime = game.userPlaytime || 0;
+    const hoursVal = Math.floor(totalPlaytime);
+    const minsVal = Math.round((totalPlaytime - hoursVal) * 60);
+
+    modalContent.innerHTML = `
+        <div class="edit-container">
+            <div class="edit-header">
+                <img src="${game.background_image || 'https://via.placeholder.com/80x110/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}">
+                <h2>${escapeHtml(game.name)}</h2>
+            </div>
+            
+            <div class="edit-row">
+                <div class="edit-section">
+                    <div class="edit-label">Ваша оценка:</div>
+                    <div class="rating-picker" id="modalRatingPicker">${ratingButtons}</div>
+                </div>
+                <div class="edit-section">
+                    <div class="edit-label">Время (ч / мин):</div>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                        <input type="number" step="1" min="0" id="modalHoursInput" class="user-playtime-input" value="${hoursVal}" placeholder="0">
+                        <span style="color:var(--text-muted); font-size:12px;">ч</span>
+                        <input type="number" step="1" min="0" max="59" id="modalMinsInput" class="user-playtime-input" value="${minsVal}" placeholder="0">
+                        <span style="color:var(--text-muted); font-size:12px;">м</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="edit-section">
+                <div class="edit-label">Теги:</div>
+                <div class="tags-picker" id="modalTagsPicker">${tagChips}</div>
+            </div>
+            
+            <textarea class="game-notes" id="modalNotesInput" rows="3" placeholder="Что понравилось, краткое описание...">${escapeHtml(game.notes || '')}</textarea>
+            
+            <div class="edit-actions">
+                <button class="action-btn btn-success" id="modalSaveBtn">Сохранить</button>
+                <button class="action-btn delete" id="modalDeleteBtn">Удалить</button>
+            </div>
+        </div>
+    `;
+}
+
+function openEditModal(index) {
+    editingGameIndex = index;
+    renderEditModal();
+    editModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+    editModal.classList.remove('active');
+    document.body.style.overflow = '';
+    editingGameIndex = null;
 }
 
 function addGameFromSearch(gameData) {
@@ -899,7 +963,6 @@ function addGameFromSearch(gameData) {
         showToast('Эта игра уже добавлена');
         return;
     }
-    games.forEach(g => g.isEditing = false);
     games.unshift({
         id: gameData.id,
         name: gameData.name,
@@ -910,19 +973,15 @@ function addGameFromSearch(gameData) {
         userRating: null,
         userPlaytime: null,
         tags: [],
-        notes: '',
-        isEditing: true
+        notes: ''
     });
     saveGames();
     renderGames();
     searchInput.value = '';
     suggestionsBox.classList.remove('active');
     suggestionsBox.innerHTML = '';
-    showToast('Игра добавлена. Нажмите Сохранить.');
-    
-    setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 50);
+    showToast('Игра добавлена. Нажмите Изменить.');
+    openEditModal(0);
 }
 
 function searchLocalGames(query) {
@@ -1011,8 +1070,7 @@ function loadFromHash() {
                     userRating: g.r || null,
                     userPlaytime: g.p || null,
                     tags: g.t || [],
-                    notes: g.n || '',
-                    isEditing: false
+                    notes: g.n || ''
                 };
             });
             saveGames();
@@ -1026,7 +1084,7 @@ function loadFromHash() {
 
 gameList.addEventListener('mousemove', function(e) {
     const cover = e.target.closest('.game-cover');
-    if (!cover || cover.closest('.edit-mode')) return;
+    if (!cover) return;
     
     const rect = cover.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -1069,7 +1127,7 @@ document.addEventListener('click', function (e) {
 gameList.addEventListener('click', function (e) {
     const target = e.target;
     
-    if (target.classList.contains('game-cover') && !target.closest('.edit-mode')) {
+    if (target.classList.contains('game-cover')) {
         if (isTransitioning) return;
         const index = parseInt(target.dataset.index);
         if (games[index] && games[index].background_image) {
@@ -1078,81 +1136,80 @@ gameList.addEventListener('click', function (e) {
         return;
     }
 
-    if (target.classList.contains('delete-btn')) {
-        const index = parseInt(target.dataset.gameIndex);
-        games.splice(index, 1);
-        saveGames();
-        renderGames();
-        showToast('Игра удалена');
-        return;
-    }
-    
-    if (target.classList.contains('save-btn')) {
-        const index = parseInt(target.dataset.gameIndex);
-        games[index].isEditing = false;
-        saveGames();
-        renderGames();
-        showToast('Сохранено');
-        return;
-    }
-
     if (target.classList.contains('edit-btn')) {
-        const index = parseInt(target.dataset.gameIndex);
-        games.forEach((g, i) => {
-            g.isEditing = (i === index);
-        });
-        saveGames();
-        renderGames();
-        setTimeout(() => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 50);
-        return;
-    }
-
-    if (target.classList.contains('rating-btn')) {
-        const index = parseInt(target.dataset.gameIndex);
-        const val = parseInt(target.dataset.val);
-        games[index].userRating = (games[index].userRating === val) ? null : val;
-        saveGames();
-        renderGames();
-        return;
-    }
-
-    if (target.classList.contains('tag-chip')) {
-        const index = parseInt(target.dataset.gameIndex);
-        const tag = target.dataset.tag;
-        if (!games[index].tags) games[index].tags = [];
-        if (games[index].tags.includes(tag)) {
-            games[index].tags = games[index].tags.filter(t => t !== tag);
-        } else {
-            games[index].tags.push(tag);
-        }
-        saveGames();
-        renderGames();
+        const index = parseInt(target.dataset.index);
+        openEditModal(index);
         return;
     }
 });
 
-gameList.addEventListener('input', function (e) {
-    if (e.target.classList.contains('game-notes')) {
-        const index = parseInt(e.target.dataset.gameIndex);
-        games[index].notes = e.target.value;
-        saveGames();
-    }
-    if (e.target.classList.contains('user-playtime-input')) {
-        const index = parseInt(e.target.dataset.gameIndex);
-        const card = e.target.closest('.game-card');
-        const hInput = card.querySelector('input[data-type="h"]');
-        const mInput = card.querySelector('input[data-type="m"]');
+modalContent.addEventListener('click', function (e) {
+    if (editingGameIndex === null) return;
+    const target = e.target;
+    const game = games[editingGameIndex];
+
+    if (target.id === 'modalSaveBtn') {
+        const hInput = document.getElementById('modalHoursInput');
+        const mInput = document.getElementById('modalMinsInput');
+        const notesInput = document.getElementById('modalNotesInput');
+        
         let h = parseFloat(hInput.value) || 0;
         let m = parseFloat(mInput.value) || 0;
         if (h < 0) h = 0;
         if (m < 0) m = 0;
         if (m > 59) m = 59;
-        games[index].userPlaytime = h + (m / 60);
+        
+        game.userPlaytime = h + (m / 60);
+        game.notes = notesInput.value;
+        
         saveGames();
+        renderGames();
+        closeEditModal();
+        showToast('Сохранено');
+        return;
+    }
+
+    if (target.id === 'modalDeleteBtn') {
+        games.splice(editingGameIndex, 1);
+        saveGames();
+        renderGames();
+        closeEditModal();
+        showToast('Игра удалена');
+        return;
+    }
+
+    if (target.classList.contains('rating-btn')) {
+        const val = parseInt(target.dataset.val);
+        game.userRating = (game.userRating === val) ? null : val;
+        saveGames();
+        
+        const buttons = document.querySelectorAll('#modalRatingPicker .rating-btn');
+        buttons.forEach(btn => {
+            if (parseInt(btn.dataset.val) === game.userRating) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        return;
+    }
+
+    if (target.classList.contains('tag-chip')) {
+        const tag = target.dataset.tag;
+        if (!game.tags) game.tags = [];
+        if (game.tags.includes(tag)) {
+            game.tags = game.tags.filter(t => t !== tag);
+            target.classList.remove('selected');
+        } else {
+            game.tags.push(tag);
+            target.classList.add('selected');
+        }
+        saveGames();
+        return;
     }
 });
+
+modalBg.addEventListener('click', closeEditModal);
 
 function openLightbox(index, targetElement) {
     isTransitioning = true;
@@ -1373,6 +1430,9 @@ closeLightbox.addEventListener('click', closeLightboxFn);
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && lightbox.classList.contains('active')) {
         closeLightboxFn();
+    }
+    if (e.key === 'Escape' && editModal.classList.contains('active')) {
+        closeEditModal();
     }
 });
 

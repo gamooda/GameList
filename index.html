@@ -6,6 +6,22 @@
 <title>Game Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <style>
+/* Кастомный скроллбар */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--border-light);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -58,6 +74,8 @@ h1 {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    flex: 1;
+    justify-content: flex-end;
 }
 .share-bar input {
     padding: 8px 12px;
@@ -66,7 +84,9 @@ h1 {
     background: var(--bg);
     color: var(--text);
     font-size: 13px;
-    min-width: 250px;
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
     outline: none;
     transition: border-color 0.2s;
 }
@@ -279,6 +299,16 @@ h1 {
     font-size: 11px;
     color: var(--text-muted);
 }
+.game-notes-preview {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
 .game-actions {
     display: flex;
     gap: 8px;
@@ -371,6 +401,7 @@ h1 {
     font-size: 13px;
     resize: vertical;
     min-height: 60px;
+    max-height: 120px;
     outline: none;
 }
 .game-notes:focus {
@@ -428,8 +459,11 @@ h1 {
     .rating-picker, .tags-picker {
         justify-content: center;
     }
+    .share-bar {
+        justify-content: center;
+    }
     .share-bar input {
-        min-width: 180px;
+        max-width: 100%;
     }
 }
 </style>
@@ -574,11 +608,11 @@ function renderGames() {
                             <div class="tags-picker">${tagChips}</div>
                         </div>
 
-                        <textarea class="game-notes" placeholder="Что понравилось, краткое описание..." data-game-index="${index}">${escapeHtml(game.notes || '')}</textarea>
+                        <textarea class="game-notes" rows="3" placeholder="Что понравилось, краткое описание..." data-game-index="${index}">${escapeHtml(game.notes || '')}</textarea>
                         
                         <div class="game-actions">
-                            <button class="action-btn btn-success" data-game-index="${index}" class="save-btn">Сохранить</button>
-                            <button class="action-btn delete" data-game-index="${index}" class="delete-btn">Удалить</button>
+                            <button class="action-btn btn-success save-btn" data-game-index="${index}">Сохранить</button>
+                            <button class="action-btn delete delete-btn" data-game-index="${index}">Удалить</button>
                         </div>
                     </div>
                 </div>
@@ -586,6 +620,7 @@ function renderGames() {
         } else {
             const tagsHtml = (game.tags || []).map(tag => `<span class="game-tag-view">${escapeHtml(tag)}</span>`).join('');
             const userRatingHtml = game.userRating ? `<div class="game-rating-badge" style="background: ${RATING_COLORS[game.userRating]}">⭐ ${game.userRating} / 10</div>` : '';
+            const notesPreview = game.notes ? `<div class="game-notes-preview">"${escapeHtml(game.notes)}"</div>` : '';
             
             return `
                 <div class="game-card" data-game-index="${index}">
@@ -603,8 +638,9 @@ function renderGames() {
                             <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
                         </div>
                         <div class="game-tags-view">${tagsHtml}</div>
+                        ${notesPreview}
                         <div class="game-actions">
-                            <button class="action-btn" data-game-index="${index}" class="edit-btn">Изменить</button>
+                            <button class="action-btn edit-btn" data-game-index="${index}">Изменить</button>
                         </div>
                     </div>
                 </div>
@@ -691,11 +727,12 @@ function generateShareLink() {
         shareLinkInput.value = '';
         return;
     }
+    // Оптимизированный формат для ссылки (только нужные данные)
     const data = games.map(g => ({
         i: g.id,
-        r: g.userRating,
-        t: g.tags,
-        n: g.notes
+        r: g.userRating || 0,
+        t: g.tags && g.tags.length ? g.tags : undefined,
+        n: g.notes || undefined
     }));
     const json = JSON.stringify(data);
     const compressed = LZString.compressToEncodedURIComponent(json);
@@ -721,7 +758,7 @@ function loadFromHash() {
                     rating: dbGame ? dbGame.rating : 0,
                     playtime: dbGame ? dbGame.playtime : 0,
                     released: dbGame ? dbGame.released : '',
-                    userRating: g.r,
+                    userRating: g.r || null,
                     tags: g.t || [],
                     notes: g.n || '',
                     isEditing: false
@@ -757,10 +794,6 @@ document.addEventListener('click', function (e) {
 
 gameList.addEventListener('click', function (e) {
     const target = e.target;
-    
-    if (target.classList.contains('remove-tag') || target.closest('.remove-tag')) {
-        return;
-    }
     
     if (target.classList.contains('delete-btn')) {
         const index = parseInt(target.dataset.gameIndex);

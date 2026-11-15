@@ -522,6 +522,7 @@ h1 {
     opacity: 1;
 }
 
+/* Lightbox */
 .lightbox {
     position: fixed;
     inset: 0;
@@ -535,7 +536,6 @@ h1 {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
-    perspective: 1200px;
     overflow: hidden;
 }
 .lightbox.active {
@@ -543,39 +543,54 @@ h1 {
     pointer-events: auto;
 }
 .lightbox-container {
-    width: 80vw;
-    height: 80vh;
+    width: 100vw;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    transform-style: preserve-3d;
+    perspective: 1200px;
 }
-.lightbox img {
-    max-width: 100%;
-    max-height: 100%;
+/* Обертка 3D-карточки */
+.lightbox-card {
+    position: relative;
+    transform-style: preserve-3d;
+    /* Размеры будут задаваться картинкой */
+}
+/* Общие стили для обеих сторон */
+.lightbox-face {
+    display: block;
+    max-width: 85vw;
+    max-height: 85vh;
     border-radius: 12px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.9);
-    transform-style: preserve-3d;
-    cursor: grab;
+    backface-visibility: hidden;
+    object-fit: contain;
 }
-.lightbox img:active {
-    cursor: grabbing;
+/* Задняя сторона перевернута на 180 градусов */
+.lightbox-face.back {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotateY(180deg);
 }
 
+/* Уменьшенная кнопка ESC */
 .esc-btn {
     position: absolute;
-    top: 30px;
-    right: 40px;
-    padding: 12px 24px;
+    top: 20px;
+    right: 30px;
+    padding: 8px 16px;
     background: linear-gradient(180deg, #3a3a4a, #1a1a22);
     color: #c0c0d0;
     font-weight: 800;
-    font-size: 14px;
-    letter-spacing: 2px;
+    font-size: 12px;
+    letter-spacing: 1.5px;
     border: 1px solid #5a5a6e;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
-    box-shadow: 0 6px 0 #0a0a0f, 0 8px 20px rgba(0,0,0,0.8);
+    box-shadow: 0 4px 0 #0a0a0f, 0 6px 15px rgba(0,0,0,0.8);
     transition: all 0.1s;
     z-index: 1001;
     user-select: none;
@@ -585,10 +600,10 @@ h1 {
     background: linear-gradient(180deg, #4a4a5a, #2a2a35);
     color: #fff;
     transform: translateY(2px);
-    box-shadow: 0 4px 0 #0a0a0f, 0 6px 15px rgba(0,0,0,0.8);
+    box-shadow: 0 2px 0 #0a0a0f, 0 4px 10px rgba(0,0,0,0.8);
 }
 .esc-btn:active {
-    transform: translateY(6px);
+    transform: translateY(4px);
     box-shadow: 0 0px 0 #0a0a0f, 0 2px 5px rgba(0,0,0,0.8);
 }
 
@@ -626,9 +641,9 @@ h1 {
         max-width: 100%;
     }
     .esc-btn {
-        top: 15px;
+        top: 10px;
         right: 15px;
-        padding: 10px 18px;
+        padding: 6px 12px;
     }
 }
 </style>
@@ -654,8 +669,11 @@ h1 {
 
 <div class="lightbox" id="lightbox">
     <div class="esc-btn" id="closeLightbox">ESC</div>
-    <div class="lightbox-container" id="lightboxContainer">
-        <img id="lightboxImg" src="" alt="Preview" draggable="false">
+    <div class="lightbox-container">
+        <div class="lightbox-card" id="lightboxCard">
+            <img class="lightbox-face front" id="lightboxImgFront" src="" alt="Preview" draggable="false">
+            <img class="lightbox-face back" id="lightboxImgBack" src="" alt="Preview Back" draggable="false">
+        </div>
     </div>
 </div>
 
@@ -684,7 +702,9 @@ const shareLinkInput = document.getElementById('shareLinkInput');
 const copyShareBtn = document.getElementById('copyShareBtn');
 const toast = document.getElementById('toast');
 const lightbox = document.getElementById('lightbox');
-const lightboxImg = document.getElementById('lightboxImg');
+const lightboxCard = document.getElementById('lightboxCard');
+const lightboxImgFront = document.getElementById('lightboxImgFront');
+const lightboxImgBack = document.getElementById('lightboxImgBack');
 const closeLightbox = document.getElementById('closeLightbox');
 
 let games = [];
@@ -1036,12 +1056,15 @@ gameList.addEventListener('click', function (e) {
     if (target.classList.contains('game-cover') && !target.closest('.edit-mode')) {
         const index = parseInt(target.dataset.index);
         if (games[index] && games[index].background_image) {
-            lightboxImg.src = games[index].background_image;
+            const imgUrl = games[index].background_image;
+            lightboxImgFront.src = imgUrl;
+            lightboxImgBack.src = imgUrl;
+            
             currentRotation = { x: 0, y: 0 };
             hasDragged = false;
             isDragging = false;
             isSpinning = true;
-            lightboxImg.style.transform = '';
+            lightboxCard.style.transform = '';
             lightbox.classList.add('active');
             lastTime = performance.now();
             if (!spinAnimationId) spinAnimationId = requestAnimationFrame(spinLoop);
@@ -1118,21 +1141,19 @@ function spinLoop(time) {
         lastTime = time;
 
         if (isSpinning && !isDragging) {
-            // Продолжаем крутить
             currentRotation.y += deltaTime * 0.03; 
             if (currentRotation.y > 360) currentRotation.y -= 360;
             
-            // Плавно выравниваем наклон по X обратно в красивый ритм, чтобы не было "сломанной" траектории
             let targetTiltX = Math.sin(currentRotation.y * Math.PI / 180) * 10;
             currentRotation.x += (targetTiltX - currentRotation.x) * 0.05;
 
-            lightboxImg.style.transform = `rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
+            lightboxCard.style.transform = `rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
         }
     }
     spinAnimationId = requestAnimationFrame(spinLoop);
 }
 
-lightboxImg.addEventListener('mousedown', function(e) {
+lightboxCard.addEventListener('mousedown', function(e) {
     e.preventDefault();
     isDragging = true;
     isSpinning = false;
@@ -1154,7 +1175,7 @@ window.addEventListener('mousemove', function(e) {
         currentRotation.y += deltaMove.x * 0.5;
         currentRotation.x -= deltaMove.y * 0.5;
         
-        lightboxImg.style.transform = `rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
+        lightboxCard.style.transform = `rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
         
         previousMousePosition = { x: e.clientX, y: e.clientY };
     }
@@ -1163,8 +1184,8 @@ window.addEventListener('mousemove', function(e) {
 window.addEventListener('mouseup', function() {
     if (isDragging) {
         isDragging = false;
-        isSpinning = true; // ВОЗОБНОВЛЯЕМ ВРАЩЕНИЕ
-        lastTime = performance.now(); // Сбрасываем таймер, чтобы не было скачков
+        isSpinning = true;
+        lastTime = performance.now();
     }
 });
 
@@ -1173,7 +1194,7 @@ function closeLightboxFn() {
     isSpinning = false;
     isDragging = false;
     hasDragged = false;
-    lightboxImg.style.transform = '';
+    lightboxCard.style.transform = '';
     currentRotation = { x: 0, y: 0 };
 }
 
@@ -1205,7 +1226,6 @@ copyShareBtn.addEventListener('click', function () {
 
 window.addEventListener('hashchange', loadFromHash);
 
-// Запускаем цикл анимации
 spinAnimationId = requestAnimationFrame(spinLoop);
 
 initDatabase();

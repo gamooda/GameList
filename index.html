@@ -436,7 +436,7 @@ h1 {
     color: var(--text);
     font-size: 13px;
     outline: none;
-    width: 80px;
+    width: 60px;
     text-align: center;
 }
 .user-playtime-input:focus {
@@ -563,7 +563,7 @@ h1 {
     z-index: 10000;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s ease, backdrop-filter 0.4s ease;
+    transition: opacity 0.4s ease, backdrop-filter 0.4s ease;
     overflow: hidden;
     perspective: 1200px;
 }
@@ -705,7 +705,7 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v13';
+const STORAGE_KEY = 'game_tracker_games_v14';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
@@ -733,16 +733,12 @@ let scrollY = 0;
 let activeTargetElement = null;
 let isTransitioning = false;
 
-function formatTime(val) {
-    if (!val) return '';
-    let num = parseFloat(val);
-    if (isNaN(num)) return val;
-    if (num === 0) return '';
-    let h = Math.floor(num);
-    let m = Math.round((num - h) * 60);
-    if (h > 0 && m > 0) return `${h}ч ${m}м`;
-    if (h > 0) return `${h}ч`;
-    return `${m}м`;
+function formatTime(h, m) {
+    if (!h && !m) return '';
+    let parts = [];
+    if (h > 0) parts.push(`${h}ч`);
+    if (m > 0) parts.push(`${m}м`);
+    return parts.join(' ');
 }
 
 async function initDatabase() {
@@ -814,6 +810,10 @@ function renderGames() {
                 return `<div class="tag-chip ${isSelected ? 'selected' : ''}" data-game-index="${index}" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</div>`;
             }).join('');
 
+            const totalPlaytime = game.userPlaytime || 0;
+            const hoursVal = Math.floor(totalPlaytime);
+            const minsVal = Math.round((totalPlaytime - hoursVal) * 60);
+
             return `
                 <div class="game-card edit-mode" data-game-index="${index}">
                     <div class="card-bg" style="background-image: ${bgImg}"></div>
@@ -828,8 +828,13 @@ function renderGames() {
                                     <div class="rating-picker">${ratingButtons}</div>
                                 </div>
                                 <div class="edit-section">
-                                    <div class="edit-label">Время (ч):</div>
-                                    <input type="number" step="0.1" min="0" class="user-playtime-input" data-game-index="${index}" value="${game.userPlaytime || ''}" placeholder="0">
+                                    <div class="edit-label">Время (ч / мин):</div>
+                                    <div style="display:flex; gap:4px; align-items:center;">
+                                        <input type="number" step="1" min="0" class="user-playtime-input" data-game-index="${index}" data-type="h" value="${hoursVal}" placeholder="0">
+                                        <span style="color:var(--text-muted); font-size:12px;">ч</span>
+                                        <input type="number" step="1" min="0" max="59" class="user-playtime-input" data-game-index="${index}" data-type="m" value="${minsVal}" placeholder="0">
+                                        <span style="color:var(--text-muted); font-size:12px;">м</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="edit-section">
@@ -849,7 +854,12 @@ function renderGames() {
             const tagsHtml = (game.tags || []).map(tag => `<span class="game-tag-view">${escapeHtml(tag)}</span>`).join('');
             const userRatingHtml = game.userRating ? `<div class="user-rating-badge" style="background: ${RATING_COLORS[game.userRating]}">⭐ ${game.userRating} / 10</div>` : '';
             
-            let timeStr = formatTime(game.userPlaytime);
+            let timeStr = '';
+            if (game.userPlaytime) {
+                const h = Math.floor(game.userPlaytime);
+                const m = Math.round((game.userPlaytime - h) * 60);
+                timeStr = formatTime(h, m);
+            }
             const userTimeHtml = timeStr ? `<span class="user-time-badge">⏱ Моё: ${timeStr}</span>` : '';
             
             const notesPreview = game.notes ? `<div class="notes-preview">"${escapeHtml(game.notes)}"</div>` : '';
@@ -889,6 +899,7 @@ function addGameFromSearch(gameData) {
         showToast('Эта игра уже добавлена');
         return;
     }
+    games.forEach(g => g.isEditing = false);
     games.unshift({
         id: gameData.id,
         name: gameData.name,
@@ -908,6 +919,10 @@ function addGameFromSearch(gameData) {
     suggestionsBox.classList.remove('active');
     suggestionsBox.innerHTML = '';
     showToast('Игра добавлена. Нажмите Сохранить.');
+    
+    setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 50);
 }
 
 function searchLocalGames(query) {
@@ -1055,6 +1070,7 @@ gameList.addEventListener('click', function (e) {
     const target = e.target;
     
     if (target.classList.contains('game-cover') && !target.closest('.edit-mode')) {
+        if (isTransitioning) return;
         const index = parseInt(target.dataset.index);
         if (games[index] && games[index].background_image) {
             openLightbox(index, target);
@@ -1082,8 +1098,14 @@ gameList.addEventListener('click', function (e) {
 
     if (target.classList.contains('edit-btn')) {
         const index = parseInt(target.dataset.gameIndex);
-        games[index].isEditing = true;
+        games.forEach((g, i) => {
+            g.isEditing = (i === index);
+        });
+        saveGames();
         renderGames();
+        setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 50);
         return;
     }
 
@@ -1119,16 +1141,21 @@ gameList.addEventListener('input', function (e) {
     }
     if (e.target.classList.contains('user-playtime-input')) {
         const index = parseInt(e.target.dataset.gameIndex);
-        let val = parseFloat(e.target.value);
-        games[index].userPlaytime = isNaN(val) || val < 0 ? null : val;
+        const card = e.target.closest('.game-card');
+        const hInput = card.querySelector('input[data-type="h"]');
+        const mInput = card.querySelector('input[data-type="m"]');
+        let h = parseFloat(hInput.value) || 0;
+        let m = parseFloat(mInput.value) || 0;
+        if (h < 0) h = 0;
+        if (m < 0) m = 0;
+        if (m > 59) m = 59;
+        games[index].userPlaytime = h + (m / 60);
         saveGames();
     }
 });
 
 function openLightbox(index, targetElement) {
-    if (isTransitioning || lightbox.classList.contains('active')) return;
     isTransitioning = true;
-
     activeTargetElement = targetElement;
     const imgUrl = games[index].background_image;
     lightboxImgFront.src = imgUrl;
@@ -1146,7 +1173,6 @@ function openLightbox(index, targetElement) {
     lightboxImgBack.style.transition = 'none';
     
     lightbox.classList.add('active');
-    document.body.classList.add('lightbox-open');
 
     const startRect = targetElement.getBoundingClientRect();
 
@@ -1166,7 +1192,6 @@ function openLightbox(index, targetElement) {
 
     void lightboxCard.offsetWidth;
 
-    // Вычисляем конечную позицию
     const tempImg = new Image();
     tempImg.onload = () => {
         const maxW = window.innerWidth * 0.85;
@@ -1194,20 +1219,27 @@ function openLightbox(index, targetElement) {
 
         lightboxImgFront.style.objectFit = 'contain';
         lightboxImgFront.style.borderRadius = '12px';
-
-        isSpinning = true;
-        lastTime = performance.now();
     };
     tempImg.src = imgUrl;
 
-    setTimeout(() => {
+    currentRotation = { x: 0, y: 0 };
+    hasDragged = false;
+    isDragging = false;
+    isSpinning = false;
+}
+
+function onOpenTransitionEnd(e) {
+    if (e.target === lightboxCard && lightbox.classList.contains('active')) {
         isTransitioning = false;
+        isSpinning = true;
+        lastTime = performance.now();
         lightboxCard.style.transition = 'none';
         lightboxCard.style.top = '50%';
         lightboxCard.style.left = '50%';
         lightboxCard.style.transform = 'translate(-50%, -50%)';
-    }, 400);
+    }
 }
+lightboxCard.addEventListener('transitionend', onOpenTransitionEnd);
 
 function spinLoop(time) {
     if (lightbox.classList.contains('active') && !isTransitioning) {
@@ -1275,7 +1307,6 @@ function closeLightboxFn() {
     isDragging = false;
     hasDragged = false;
 
-    // Мгновенно возвращаем картинку в карточке
     if (activeTargetElement) {
         activeTargetElement.style.opacity = '1';
     }
@@ -1305,22 +1336,27 @@ function closeLightboxFn() {
     lightboxImgFront.style.borderRadius = '8px';
 
     lightbox.classList.remove('active');
+}
 
-    setTimeout(() => {
+function onCloseTransitionEnd(e) {
+    if (e.target === lightboxCard && !lightbox.classList.contains('active')) {
         forceClose();
         isTransitioning = false;
-    }, 400);
+    }
 }
+lightboxCard.addEventListener('transitionend', onCloseTransitionEnd);
 
 function forceClose() {
     document.body.style.position = '';
     document.body.style.top = '';
     document.body.style.width = '';
-    document.body.classList.remove('lightbox-open');
     window.scrollTo(0, scrollY);
 
     lightboxCard.style.transition = '';
     lightboxCard.style.transform = '';
+    lightboxCard.style.cssText = ''; 
+    lightboxImgFront.style.cssText = '';
+    lightboxImgBack.style.cssText = '';
     currentRotation = { x: 0, y: 0 };
     isSpinning = false;
     isDragging = false;

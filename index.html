@@ -52,6 +52,7 @@ body {
     flex-direction: column;
     align-items: center;
     padding: 24px 16px;
+    perspective: 1000px;
 }
 .app {
     max-width: 800px;
@@ -242,29 +243,37 @@ h1 {
     align-items: flex-start;
     z-index: 5;
 }
-.game-cover {
+.cover-wrapper {
     width: 64px;
     height: 64px;
+    flex-shrink: 0;
+    perspective: 600px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+.game-cover {
+    width: 100%;
+    height: 100%;
     border-radius: 4px;
     object-fit: cover;
     background: var(--bg);
-    flex-shrink: 0;
-    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+    transition: transform 0.1s ease-out, box-shadow 0.3s ease;
     box-shadow: 0 2px 5px rgba(0,0,0,0.4);
     cursor: pointer;
+    transform-style: preserve-3d;
 }
 .game-cover:hover {
-    transform: scale(1.3) translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
-    z-index: 100;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.8);
 }
-.game-card.edit-mode .game-cover {
+.game-card.edit-mode .cover-wrapper {
     width: 100px;
     height: 100px;
     pointer-events: none;
 }
-.game-card.edit-mode .game-cover:hover {
-    transform: none;
+.game-card.edit-mode .game-cover {
+    transform: none !important;
     box-shadow: 0 2px 5px rgba(0,0,0,0.4);
 }
 .game-body {
@@ -513,13 +522,12 @@ h1 {
     opacity: 1;
 }
 
-/* Lightbox */
 .lightbox {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -527,21 +535,42 @@ h1 {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
+    perspective: 1200px;
+    overflow: hidden;
 }
 .lightbox.active {
     opacity: 1;
     pointer-events: auto;
 }
-.lightbox img {
-    max-width: 90vw;
-    max-height: 90vh;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-    transform: scale(0.9);
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+.lightbox-container {
+    width: 80vw;
+    height: 80vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform-style: preserve-3d;
 }
-.lightbox.active img {
-    transform: scale(1);
+.lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+    transform-style: preserve-3d;
+    cursor: grab;
+    animation: autoSpin 15s linear infinite;
+}
+.lightbox img:active {
+    cursor: grabbing;
+}
+.lightbox.dragging img {
+    animation: none;
+}
+@keyframes autoSpin {
+    0% { transform: rotateY(0deg) rotateX(0deg); }
+    25% { transform: rotateY(90deg) rotateX(10deg); }
+    50% { transform: rotateY(180deg) rotateX(0deg); }
+    75% { transform: rotateY(270deg) rotateX(-10deg); }
+    100% { transform: rotateY(360deg) rotateX(0deg); }
 }
 .close-lightbox {
     position: absolute;
@@ -551,11 +580,13 @@ h1 {
     font-size: 40px;
     font-weight: bold;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: color 0.2s, transform 0.2s;
     line-height: 1;
+    z-index: 1001;
 }
 .close-lightbox:hover {
     color: var(--danger);
+    transform: scale(1.1);
 }
 
 @media (max-width: 640px) {
@@ -563,14 +594,16 @@ h1 {
         flex-direction: column;
         align-items: stretch;
     }
-    .game-cover {
+    .cover-wrapper {
         width: 100%;
         height: 120px;
-        border-radius: 6px;
+        perspective: none;
     }
-    .game-cover:hover {
-        transform: none;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    .game-cover {
+        width: 100%;
+        height: 100%;
+        border-radius: 6px;
+        pointer-events: none;
     }
     .game-header, .game-meta-row {
         flex-direction: column;
@@ -613,7 +646,9 @@ h1 {
 
 <div class="lightbox" id="lightbox">
     <span class="close-lightbox" id="closeLightbox">&times;</span>
-    <img id="lightboxImg" src="" alt="Preview">
+    <div class="lightbox-container" id="lightboxContainer">
+        <img id="lightboxImg" src="" alt="Preview">
+    </div>
 </div>
 
 <div class="toast" id="toast">Ссылка скопирована!</div>
@@ -646,6 +681,9 @@ const closeLightbox = document.getElementById('closeLightbox');
 
 let games = [];
 let debounceTimer = null;
+let isDragging = false;
+let previousMousePosition = { x: 0, y: 0 };
+let currentRotation = { x: 0, y: 0 };
 
 function formatTime(val) {
     if (!val) return '';
@@ -664,14 +702,12 @@ async function initDatabase() {
         const response = await fetch('hltb_games.json');
         if (!response.ok) throw new Error('Network response was not ok');
         GAME_DATABASE = await response.json();
-        console.log(`База данных загружена: ${GAME_DATABASE.length} игр`);
         searchInput.placeholder = `Поиск среди ${GAME_DATABASE.length} игр...`;
         loadGames();
         loadFromHash();
         renderGames();
         generateShareLink();
     } catch (error) {
-        console.error('Ошибка загрузки базы:', error);
         showToast('Ошибка загрузки базы. Открой через Live Server.');
         searchInput.placeholder = 'Ошибка загрузки базы данных';
         searchInput.disabled = true;
@@ -731,7 +767,9 @@ function renderGames() {
 
             return `
                 <div class="game-card edit-mode" data-game-index="${index}">
-                    <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/100x100/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}">
+                    <div class="cover-wrapper">
+                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/100x100/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}">
+                    </div>
                     <div class="game-body">
                         <div class="game-header">
                             <div class="game-title">${escapeHtml(game.name)}</div>
@@ -780,7 +818,9 @@ function renderGames() {
             
             return `
                 <div class="game-card" data-game-index="${index}">
-                    <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/64x64/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}">
+                    <div class="cover-wrapper">
+                        <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/64x64/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}">
+                    </div>
                     <div class="game-body">
                         <div class="game-header">
                             <div class="game-title">${escapeHtml(game.name)}</div>
@@ -935,6 +975,29 @@ function loadFromHash() {
     }
 }
 
+gameList.addEventListener('mousemove', function(e) {
+    const cover = e.target.closest('.game-cover');
+    if (!cover || cover.closest('.edit-mode')) return;
+    
+    const rect = cover.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    const rotateX = ((y - centerY) / centerY) * -25;
+    const rotateY = ((x - centerX) / centerX) * 25;
+    
+    cover.style.transform = `scale(1.4) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+});
+
+gameList.addEventListener('mouseout', function(e) {
+    const cover = e.target.closest('.game-cover');
+    if (cover) {
+        cover.style.transform = '';
+    }
+});
+
 searchInput.addEventListener('input', function () {
     clearTimeout(debounceTimer);
     const query = this.value;
@@ -961,6 +1024,8 @@ gameList.addEventListener('click', function (e) {
         const index = parseInt(target.dataset.index);
         if (games[index] && games[index].background_image) {
             lightboxImg.src = games[index].background_image;
+            currentRotation = { x: 0, y: 0 };
+            lightboxImg.style.transform = '';
             lightbox.classList.add('active');
         }
         return;
@@ -1029,13 +1094,43 @@ gameList.addEventListener('input', function (e) {
     }
 });
 
+lightboxImg.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    isDragging = true;
+    lightbox.classList.add('dragging');
+    previousMousePosition = { x: e.clientX, y: e.clientY };
+});
+
+window.addEventListener('mouseup', function() {
+    isDragging = false;
+    lightbox.classList.remove('dragging');
+});
+
+window.addEventListener('mousemove', function(e) {
+    if (isDragging) {
+        const deltaMove = {
+            x: e.clientX - previousMousePosition.x,
+            y: e.clientY - previousMousePosition.y
+        };
+        
+        currentRotation.y += deltaMove.x * 0.5;
+        currentRotation.x -= deltaMove.y * 0.5;
+        
+        lightboxImg.style.transform = `rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
+        
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+    }
+});
+
 closeLightbox.addEventListener('click', function() {
     lightbox.classList.remove('active');
+    lightbox.classList.remove('dragging');
 });
 
 lightbox.addEventListener('click', function(e) {
     if (e.target === lightbox) {
         lightbox.classList.remove('active');
+        lightbox.classList.remove('dragging');
     }
 });
 

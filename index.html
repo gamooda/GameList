@@ -565,6 +565,7 @@ h1 {
     pointer-events: none;
     transition: opacity 0.3s ease, backdrop-filter 0.4s ease;
     overflow: hidden;
+    perspective: 1200px;
 }
 .lightbox.active {
     opacity: 1;
@@ -578,33 +579,30 @@ h1 {
     left: 0;
     width: 100%;
     height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    perspective: 1200px;
+    pointer-events: none;
 }
 .lightbox-card {
-    position: relative;
+    position: fixed;
     transform-style: preserve-3d;
     display: flex;
     justify-content: center;
     align-items: center;
+    transform-origin: center center;
+    pointer-events: auto;
 }
 .lightbox-face {
     display: block;
-    max-width: 85vw;
-    max-height: 85vh;
-    border-radius: 12px;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.9);
     backface-visibility: hidden;
-    object-fit: contain;
+    object-fit: cover;
 }
 .lightbox-face.back {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
     transform: rotateY(180deg);
 }
 
@@ -705,7 +703,7 @@ const RATING_COLORS = [
     '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
 ];
 
-const STORAGE_KEY = 'game_tracker_games_v11';
+const STORAGE_KEY = 'game_tracker_games_v12';
 const searchInput = document.getElementById('searchInput');
 const suggestionsBox = document.getElementById('suggestions');
 const gameList = document.getElementById('gameList');
@@ -1135,47 +1133,84 @@ function openLightbox(index, targetElement) {
     document.body.style.top = `-${scrollY}px`;
     document.body.style.width = '100%';
     
-    // Скрываем оригинальную картинку, чтобы она не просвечивала
     targetElement.style.opacity = '0';
-    
     lightbox.classList.add('active');
     
     const startRect = targetElement.getBoundingClientRect();
-    
-    requestAnimationFrame(() => {
-        const endRect = lightboxImgFront.getBoundingClientRect();
-        
-        const scaleX = startRect.width / endRect.width;
-        const scaleY = startRect.height / endRect.height;
-        
-        const centerX = startRect.left + startRect.width / 2;
-        const centerY = startRect.top + startRect.height / 2;
-        
-        const targetCenterX = endRect.left + endRect.width / 2;
-        const targetCenterY = endRect.top + endRect.height / 2;
-        
-        const deltaX = centerX - targetCenterX;
-        const deltaY = centerY - targetCenterY;
 
+    // 1. Measure final state
+    lightboxCard.style.transition = 'none';
+    lightboxImgFront.style.transition = 'none';
+    lightboxImgBack.style.transition = 'none';
+
+    lightboxCard.style.position = 'relative';
+    lightboxCard.style.width = 'auto';
+    lightboxCard.style.height = 'auto';
+    lightboxCard.style.top = 'auto';
+    lightboxCard.style.left = 'auto';
+    lightboxCard.style.transform = 'none';
+
+    lightboxImgFront.style.width = 'auto';
+    lightboxImgFront.style.height = 'auto';
+    lightboxImgFront.style.maxWidth = '85vw';
+    lightboxImgFront.style.maxHeight = '85vh';
+    lightboxImgFront.style.objectFit = 'contain';
+    lightboxImgFront.style.borderRadius = '12px';
+
+    void lightboxCard.offsetWidth;
+
+    const finalWidth = lightboxImgFront.offsetWidth;
+    const finalHeight = lightboxImgFront.offsetHeight;
+
+    // 2. Set initial state (from card)
+    lightboxCard.style.position = 'fixed';
+    lightboxCard.style.top = `${startRect.top}px`;
+    lightboxCard.style.left = `${startRect.left}px`;
+    lightboxCard.style.width = `${startRect.width}px`;
+    lightboxCard.style.height = `${startRect.height}px`;
+
+    lightboxImgFront.style.width = '100%';
+    lightboxImgFront.style.height = '100%';
+    lightboxImgFront.style.maxWidth = 'none';
+    lightboxImgFront.style.maxHeight = 'none';
+    lightboxImgFront.style.objectFit = 'cover';
+    lightboxImgFront.style.borderRadius = '8px';
+
+    void lightboxCard.offsetWidth;
+
+    // 3. Animate to center
+    lightboxCard.style.transition = 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    lightboxImgFront.style.transition = 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    lightboxImgBack.style.transition = 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
+
+    const finalTop = (window.innerHeight - finalHeight) / 2;
+    const finalLeft = (window.innerWidth - finalWidth) / 2;
+
+    lightboxCard.style.top = `${finalTop}px`;
+    lightboxCard.style.left = `${finalLeft}px`;
+    lightboxCard.style.width = `${finalWidth}px`;
+    lightboxCard.style.height = `${finalHeight}px`;
+
+    lightboxImgFront.style.objectFit = 'contain';
+    lightboxImgFront.style.borderRadius = '12px';
+    lightboxImgFront.style.width = '100%';
+    lightboxImgFront.style.height = '100%';
+
+    currentRotation = { x: 0, y: 0 };
+    hasDragged = false;
+    isDragging = false;
+    isSpinning = false;
+
+    // 4. Post-animation state
+    setTimeout(() => {
         lightboxCard.style.transition = 'none';
-        lightboxCard.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(${scaleX})`;
+        lightboxCard.style.top = '50%';
+        lightboxCard.style.left = '50%';
+        lightboxCard.style.transform = 'translate(-50%, -50%)';
         
-        void lightboxCard.offsetWidth;
-        
-        lightboxCard.style.transition = 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
-        lightboxCard.style.transform = 'translate(0, 0) scale(1)';
-
-        currentRotation = { x: 0, y: 0 };
-        hasDragged = false;
-        isDragging = false;
-        isSpinning = false;
-        
-        setTimeout(() => {
-            isSpinning = true;
-            lastTime = performance.now();
-            lightboxCard.style.transition = '';
-        }, 500);
-    });
+        isSpinning = true;
+        lastTime = performance.now();
+    }, 500);
 }
 
 function spinLoop(time) {
@@ -1190,7 +1225,7 @@ function spinLoop(time) {
             let targetTiltX = Math.sin(currentRotation.y * Math.PI / 180) * 10;
             currentRotation.x += (targetTiltX - currentRotation.x) * 0.05;
 
-            lightboxCard.style.transform = `rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
+            lightboxCard.style.transform = `translate(-50%, -50%) rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
         }
     }
     spinAnimationId = requestAnimationFrame(spinLoop);
@@ -1218,7 +1253,7 @@ window.addEventListener('mousemove', function(e) {
         currentRotation.y += deltaMove.x * 0.5;
         currentRotation.x -= deltaMove.y * 0.5;
         
-        lightboxCard.style.transform = `rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
+        lightboxCard.style.transform = `translate(-50%, -50%) rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
         
         previousMousePosition = { x: e.clientX, y: e.clientY };
     }
@@ -1238,27 +1273,36 @@ function closeLightboxFn() {
         return;
     }
 
-    const startRect = lightboxImgFront.getBoundingClientRect();
+    const startRect = lightboxCard.getBoundingClientRect();
     const endRect = activeTargetElement.getBoundingClientRect();
-
-    const scaleX = endRect.width / startRect.width;
-    const scaleY = endRect.height / startRect.height;
-
-    const centerX = startRect.left + startRect.width / 2;
-    const centerY = startRect.top + startRect.height / 2;
-
-    const targetCenterX = endRect.left + endRect.width / 2;
-    const targetCenterY = endRect.top + endRect.height / 2;
-
-    const deltaX = targetCenterX - centerX;
-    const deltaY = targetCenterY - centerY;
 
     isSpinning = false;
     isDragging = false;
     hasDragged = false;
 
-    lightboxCard.style.transition = 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
-    lightboxCard.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(${scaleX})`;
+    lightboxCard.style.transition = 'none';
+    lightboxCard.style.transform = 'none';
+    lightboxCard.style.top = `${startRect.top}px`;
+    lightboxCard.style.left = `${startRect.left}px`;
+    lightboxCard.style.width = `${startRect.width}px`;
+    lightboxCard.style.height = `${startRect.height}px`;
+
+    lightboxImgFront.style.transition = 'none';
+    lightboxImgFront.style.objectFit = 'contain';
+    lightboxImgFront.style.borderRadius = '12px';
+
+    void lightboxCard.offsetWidth;
+
+    lightboxCard.style.transition = 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    lightboxImgFront.style.transition = 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
+
+    lightboxCard.style.top = `${endRect.top}px`;
+    lightboxCard.style.left = `${endRect.left}px`;
+    lightboxCard.style.width = `${endRect.width}px`;
+    lightboxCard.style.height = `${endRect.height}px`;
+
+    lightboxImgFront.style.objectFit = 'cover';
+    lightboxImgFront.style.borderRadius = '8px';
 
     lightbox.classList.remove('active');
 

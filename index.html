@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GameList</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2318181b'/><g transform='translate(4, 4)' fill='none' stroke='%238b5cf6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 11h4m-2-2v4m7-1h.01M18 10h.01'/><rect x='2' y='6' width='20' height='12' rx='6'/></g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Manrope:wght@400;500;600;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <style>
 ::-webkit-scrollbar {
@@ -26,7 +29,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
     user-select: none;
 }
 input, textarea {
@@ -91,7 +94,7 @@ header {
 }
 h1 {
     font-size: 26px;
-    font-weight: 900;
+    font-weight: 800;
     letter-spacing: -0.5px;
     display: flex;
     align-items: center;
@@ -177,52 +180,178 @@ h1 {
     background: #059669;
     transform: translateY(-1px);
 }
+
 .search-section {
     position: relative;
     margin-bottom: 24px;
 }
+.search-icon-wrapper {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #71717a;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 1;
+}
+.search-icon-wrapper svg {
+    width: 22px;
+    height: 22px;
+}
 .search-input {
     width: 100%;
-    padding: 12px 16px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
+    padding: 20px 24px 20px 56px;
+    border-radius: 14px;
+    border: 1px solid #27272a;
     background: rgba(24, 24, 31, 0.8);
-    color: var(--text);
-    font-size: 15px;
+    color: #f4f4f5;
+    font-family: 'Golos Text', sans-serif;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    caret-color: #8b5cf6;
     outline: none;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.search-input::placeholder {
+    color: #71717a;
+    font-weight: 400;
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+    letter-spacing: normal;
 }
 .search-input:focus {
-    border-color: var(--primary);
-    background: var(--bg);
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2), 0 4px 12px rgba(0,0,0,0.3);
-    transform: translateY(-1px);
+    border-color: #7c3aed;
+    background: #09090b;
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15), 0 8px 24px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
 }
-.suggestions {
+.search-section:focus-within .search-icon-wrapper {
+    color: #8b5cf6;
+}
+
+.suggestions-wrapper {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 8px);
     left: 0;
     right: 0;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    max-height: 320px;
-    overflow-y: auto;
-    z-index: 10;
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 12px;
     display: none;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.7);
+    z-index: 10;
+    overflow: hidden;
 }
-.suggestions.active {
+.suggestions-wrapper.active {
     display: block;
+    animation: wrapperAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+@keyframes wrapperAppear {
+    from { opacity: 0; transform: translateY(-10px) rotateX(-5deg); transform-origin: top center; }
+    to { opacity: 1; transform: translateY(0) rotateX(0deg); }
+}
+.suggestions-scroll {
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+}
+.suggestions-scroll.no-scroll {
+    overflow-y: hidden !important;
+    max-height: none !important;
+}
+.fade-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: linear-gradient(to top, #18181b 15%, rgba(24, 24, 27, 0.85) 45%, transparent 100%);
+    pointer-events: none;
+    border-radius: 0 0 12px 12px;
+    transition: opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 5;
+    box-shadow: inset 0 -35px 40px -20px rgba(0, 0, 0, 0.95);
+}
+.fade-overlay::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 20px;
+    background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+    border-radius: 0 0 12px 12px;
+}
+.fade-overlay.hidden {
+    opacity: 0;
+}
+.scroll-top-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(39, 39, 42, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f4f4f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.scroll-top-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+.scroll-top-btn:hover {
+    background: rgba(63, 63, 70, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+.scroll-top-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
 .suggestion-item {
     display: flex;
-    gap: 12px;
-    padding: 10px 12px;
+    gap: 14px;
+    padding: 14px 18px;
     cursor: pointer;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid #27272a;
     align-items: center;
     transition: background 0.2s ease;
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(15px) scale(0.95);
+    animation: premiumAppear 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes premiumAppear {
+    0% {
+        opacity: 0;
+        filter: blur(8px);
+        transform: translateY(15px) scale(0.95);
+    }
+    100% {
+        opacity: 1;
+        filter: blur(0px);
+        transform: translateY(0) scale(1);
+    }
 }
 .suggestion-item:last-child {
     border-bottom: none;
@@ -230,33 +359,87 @@ h1 {
 .suggestion-item:hover {
     background: #23232b;
 }
-.suggestion-item img {
-    width: 56px;
-    height: 56px;
-    border-radius: 6px;
-    object-fit: cover;
-    background: var(--bg);
+.img-wrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    background: #18181b;
     flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
+.spinner-small {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, rgba(139, 92, 246, 0) 0%, #8b5cf6 100%);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+    animation: spin 0.9s linear infinite;
+    transition: opacity 0.3s ease;
+    z-index: 0;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    filter: blur(10px);
+    transition: opacity 0.4s ease, filter 0.4s ease;
+    position: relative;
+    z-index: 1;
+    display: block;
+}
+.img-wrapper img.loaded {
+    opacity: 1;
+    filter: blur(0px);
+}
+.img-wrapper img.loaded + .spinner-small {
+    opacity: 0;
+}
+
 .suggestion-info {
     flex: 1;
     min-width: 0;
 }
 .suggestion-info h4 {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 2px;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--text);
+    color: #f4f4f5;
 }
 .suggestion-meta {
     display: flex;
-    gap: 12px;
-    font-size: 12px;
-    color: var(--text-muted);
+    gap: 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #a1a1aa;
     flex-wrap: wrap;
+}
+.suggestion-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.empty-search {
+    padding: 24px;
+    color: #a1a1aa;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 500;
+    animation: premiumAppear 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 .game-list {
@@ -265,16 +448,9 @@ h1 {
     gap: 16px;
     align-items: start;
 }
-
 @keyframes cardAppear {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 .game-card {
     position: relative;
@@ -943,9 +1119,9 @@ h1 {
     border: 3px solid rgba(255, 255, 255, 0.08);
     border-top-color: var(--primary);
     border-radius: 50%;
-    animation: spin 0.85s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    animation: mainSpin 0.85s cubic-bezier(0.5, 0, 0.5, 1) infinite;
 }
-@keyframes spin {
+@keyframes mainSpin {
     to { transform: rotate(360deg); }
 }
 
@@ -1003,8 +1179,18 @@ h1 {
     </header>
 
     <div class="search-section">
-        <input type="text" class="search-input" id="searchInput" placeholder="Поиск среди игр..." autocomplete="off">
-        <div class="suggestions" id="suggestions"></div>
+        <div class="search-icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </div>
+        <input type="text" class="search-input" id="searchInput" placeholder="Поиск игр..." autocomplete="off">
+        
+        <div class="suggestions-wrapper" id="suggestionsWrapper">
+            <div class="suggestions-scroll" id="suggestionsScroll"></div>
+            <div class="fade-overlay hidden" id="fadeOverlay"></div>
+            <button class="scroll-top-btn" id="scrollTopBtn" aria-label="Наверх">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            </button>
+        </div>
     </div>
 
     <div class="game-list" id="gameList"></div>
@@ -1046,15 +1232,22 @@ const PRESET_TAGS = [
     "Хоррор", "RPG", "Шутер", "Песочница", "Инди"
 ];
 
-const RATING_COLORS = [
-    '', 
-    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', 
-    '#22c55e', '#10b981', '#059669', '#047857', '#065f46'
-];
+const RATING_COLORS = ['', '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#059669', '#047857', '#065f46'];
+
+function getPlaytimeColor(hours) {
+    if (hours <= 15) return '#34d399';
+    if (hours <= 35) return '#a3e635';
+    if (hours <= 60) return '#facc15';
+    if (hours <= 100) return '#fb923c';
+    return '#f87171';
+}
 
 const STORAGE_KEY = 'game_tracker_games_v19';
 const searchInput = document.getElementById('searchInput');
-const suggestionsBox = document.getElementById('suggestions');
+const suggestionsWrapper = document.getElementById('suggestionsWrapper');
+const suggestionsScroll = document.getElementById('suggestionsScroll');
+const fadeOverlay = document.getElementById('fadeOverlay');
+const scrollTopBtn = document.getElementById('scrollTopBtn');
 const gameList = document.getElementById('gameList');
 const emptyState = document.getElementById('emptyState');
 const shareLinkInput = document.getElementById('shareLinkInput');
@@ -1199,6 +1392,32 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function checkScroll() {
+    if (!suggestionsWrapper.classList.contains('active')) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = suggestionsScroll;
+    const maxScroll = scrollHeight - clientHeight;
+
+    if (maxScroll <= 2) {
+        fadeOverlay.classList.add('hidden');
+        scrollTopBtn.classList.remove('visible');
+        return;
+    }
+
+    if (scrollTop >= maxScroll * 0.5) {
+        scrollTopBtn.classList.add('visible');
+    } else {
+        scrollTopBtn.classList.remove('visible');
+    }
+
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 15;
+    if (isAtBottom) {
+        fadeOverlay.classList.add('hidden');
+    } else {
+        fadeOverlay.classList.remove('hidden');
+    }
+}
+
 function renderGames() {
     hideLoader();
     if (games.length === 0) {
@@ -1213,8 +1432,10 @@ function renderGames() {
 
         const tagsHtml = (game.tags || []).map(tag => `<span class="game-tag-view">${escapeHtml(tag)}</span>`).join('');
         
+        const roundedRating = Math.round(game.userRating) || 0;
+        const ratingColor = RATING_COLORS[roundedRating] || 'currentColor';
         const userRatingHtml = game.userRating ? `
-            <div class="user-rating-badge" style="background: ${RATING_COLORS[game.userRating]}">
+            <div class="user-rating-badge" style="background: ${ratingColor}">
                 <svg class="small-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 ${game.userRating} / 10
             </div>` : '';
@@ -1227,7 +1448,7 @@ function renderGames() {
         }
         
         const userTimeHtml = timeStr ? `
-            <span class="user-time-badge">
+            <span class="user-time-badge" style="color: ${getPlaytimeColor(game.userPlaytime)}; background: rgba(0,0,0,0.2);">
                 <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3L19 3"/><path d="M12 3v2"/></svg>
                 Моё: ${timeStr}
             </span>` : '';
@@ -1388,37 +1609,57 @@ function addGameFromSearch(gameData) {
     saveGames();
     renderGames();
     searchInput.value = '';
-    suggestionsBox.classList.remove('active');
-    suggestionsBox.innerHTML = '';
+    suggestionsWrapper.classList.remove('active');
+    suggestionsScroll.innerHTML = '';
     showToast('Игра добавлена. Нажмите Изменить.', 'success');
     openEditModal(0);
 }
 
 function searchLocalGames(query) {
     if (!query.trim()) {
-        suggestionsBox.classList.remove('active');
-        suggestionsBox.innerHTML = '';
+        suggestionsWrapper.classList.remove('active');
+        setTimeout(() => {
+            if (!suggestionsWrapper.classList.contains('active')) {
+                suggestionsScroll.innerHTML = '';
+            }
+        }, 300);
         return;
     }
 
-    const lowerQuery = query.toLowerCase();
+    const lowerQuery = query.trim().toLowerCase();
     const filtered = [];
 
     for (let i = 0; i < GAME_DATABASE.length; i++) {
         const game = GAME_DATABASE[i];
         if (game.name && game.name.toLowerCase().includes(lowerQuery)) {
             filtered.push(game);
-            if (filtered.length >= 10) break;
+            if (filtered.length >= 15) break;
         }
     }
 
     if (filtered.length === 0) {
-        suggestionsBox.innerHTML = '<div style="padding:16px;color:var(--text-muted);text-align:center;">Ничего не найдено</div>';
-        suggestionsBox.classList.add('active');
+        suggestionsScroll.innerHTML = '<div class="empty-search">Ничего не найдено</div>';
+        suggestionsWrapper.classList.add('active');
+        fadeOverlay.classList.add('hidden');
+        scrollTopBtn.classList.remove('visible');
+        suggestionsScroll.classList.add('no-scroll');
         return;
     }
 
-    suggestionsBox.innerHTML = filtered.map(game => `
+    if (filtered.length <= 5) {
+        suggestionsScroll.classList.add('no-scroll');
+        fadeOverlay.classList.add('hidden');
+        scrollTopBtn.classList.remove('visible');
+    } else {
+        suggestionsScroll.classList.remove('no-scroll');
+    }
+
+    suggestionsScroll.innerHTML = filtered.map((game, index) => {
+        const roundedRating = Math.round(game.rating) || 0;
+        const ratingColor = RATING_COLORS[roundedRating] || 'currentColor';
+        const timeColor = getPlaytimeColor(game.playtime || 0);
+
+        return `
         <div class="suggestion-item" data-game='${JSON.stringify({
             id: game.id,
             name: game.name,
@@ -1426,19 +1667,37 @@ function searchLocalGames(query) {
             rating: game.rating,
             playtime: game.playtime,
             released: game.released
-        }).replace(/'/g, "&#39;")}'>
-            <img src="${game.background_image || 'https://via.placeholder.com/56x56/18181f/9a9aad?text=?'}" alt="${escapeHtml(game.name)}" loading="lazy">
+        }).replace(/'/g, "&#39;")}' style="animation-delay: ${index * 0.04}s">
+            <div class="img-wrapper">
+                <img src="${game.background_image || 'https://via.placeholder.com/56x56/18181f/9a9aad?text=?'}" alt="${escapeHtml(game.name)}" onload="this.classList.add('loaded')">
+                <div class="spinner-small"></div>
+            </div>
             <div class="suggestion-info">
                 <h4>${escapeHtml(game.name)}</h4>
                 <div class="suggestion-meta">
-                    <span>⭐ ${game.rating || '—'}</span>
-                    <span>⏱ ${game.playtime ? game.playtime + ' ч' : '—'}</span>
-                    <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
+                    <span>
+                        <svg class="small-icon" style="color: ${ratingColor}" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        <span style="color: ${ratingColor}">${game.rating || '—'}</span>
+                    </span>
+                    <span style="color: ${timeColor}">
+                        <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        ${game.playtime ? game.playtime + ' ч' : '—'}
+                    </span>
+                    <span style="color: #a1a1aa">
+                        <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        ${game.released ? game.released.slice(0, 4) : '—'}
+                    </span>
                 </div>
             </div>
         </div>
-    `).join('');
-    suggestionsBox.classList.add('active');
+        `;
+    }).join('');
+
+    suggestionsScroll.scrollTop = 0;
+    suggestionsWrapper.classList.add('active');
+    
+    checkScroll();
+    setTimeout(checkScroll, 700);
 }
 
 function generateShareLink() {
@@ -1543,7 +1802,14 @@ searchInput.addEventListener('input', function () {
     debounceTimer = setTimeout(() => searchLocalGames(query), 200);
 });
 
-suggestionsBox.addEventListener('click', function (e) {
+suggestionsScroll.addEventListener('scroll', checkScroll);
+
+scrollTopBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    suggestionsScroll.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+suggestionsScroll.addEventListener('click', function (e) {
     const item = e.target.closest('.suggestion-item');
     if (!item) return;
     const gameData = JSON.parse(item.dataset.game);
@@ -1552,7 +1818,7 @@ suggestionsBox.addEventListener('click', function (e) {
 
 document.addEventListener('click', function (e) {
     if (!e.target.closest('.search-section')) {
-        suggestionsBox.classList.remove('active');
+        suggestionsWrapper.classList.remove('active');
     }
 });
 

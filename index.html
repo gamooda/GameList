@@ -800,7 +800,7 @@ h1 {
     display: flex;
     gap: 16px;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 .edit-header img {
     width: 80px;
@@ -817,6 +817,27 @@ h1 {
     line-height: 1.2;
     min-width: 0;
     overflow-wrap: anywhere;
+}
+.hltb-stats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+.hltb-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.hltb-stat strong {
+    color: var(--text);
+    font-weight: 600;
 }
 .edit-row {
     display: flex;
@@ -2130,6 +2151,33 @@ function renderEditModal() {
     if (editingGameIndex === null || !editingDraft) return;
     const game = editingDraft;
 
+    const dbGame = dbById.get(String(game.id)) || {};
+    const hltbRating = game.rating || dbGame.rating || 0;
+    const hltbMain = game.playtime || dbGame.playtime || 0;
+    const hltbMainPlus = dbGame.main_plus || 0;
+    const hltbCompletionist = dbGame.completionist || 0;
+
+    const hltbStatsHtml = `
+        <div class="hltb-stats">
+            <div class="hltb-stat">
+                <svg class="small-icon" style="color: #eab308" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                HLTB: <strong>${hltbRating ? hltbRating + ' / 10' : '—'}</strong>
+            </div>
+            <div class="hltb-stat">
+                <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Сюжет: <strong>${hltbMain ? hltbMain + ' ч' : '—'}</strong>
+            </div>
+            <div class="hltb-stat">
+                <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Сюжет + доп: <strong>${hltbMainPlus ? hltbMainPlus + ' ч' : '—'}</strong>
+            </div>
+            <div class="hltb-stat">
+                <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                100%: <strong>${hltbCompletionist ? hltbCompletionist + ' ч' : '—'}</strong>
+            </div>
+        </div>
+    `;
+
     const allTags = [...new Set([...PRESET_TAGS, ...(game.tags || [])])];
 
     const ratingButtons = Array.from({length: 10}, (_, i) => {
@@ -2154,6 +2202,8 @@ function renderEditModal() {
                 <img src="${escapeHtml(headerSrc)}" alt="${escapeHtml(game.name)}">
                 <h2>${escapeHtml(game.name)}</h2>
             </div>
+            
+            ${hltbStatsHtml}
             
             <div class="edit-row">
                 <div class="edit-section">

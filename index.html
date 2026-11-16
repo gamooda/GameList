@@ -534,7 +534,7 @@ h1 {
     padding: 12px;
     display: flex;
     flex-direction: column;
-    transition: border-color 0.3s, box-shadow 0.3s;
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
     z-index: 1;
     animation: cardAppear 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
@@ -543,6 +543,28 @@ h1 {
     box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     z-index: 2;
 }
+body.is-moving .game-card {
+    cursor: pointer;
+}
+body.is-moving .game-card:not(.moving):hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
+}
+.game-card.moving {
+    border: 2px dashed var(--primary);
+    opacity: 0.7;
+    transform: scale(0.98);
+    box-shadow: none;
+    z-index: 0;
+    pointer-events: none;
+}
+.game-card.drop-target {
+    border-color: var(--success) !important;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4) !important;
+    transform: scale(1.02);
+    z-index: 3;
+}
+
 .card-bg {
     position: absolute;
     inset: -20px;
@@ -739,14 +761,37 @@ h1 {
     background: rgba(255,255,255,0.1);
     color: var(--text);
 }
-.edit-btn {
+.edit-btn, .move-btn {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease, background 0.3s ease, color 0.3s ease;
 }
-.game-card:hover .edit-btn {
+.game-card:hover .edit-btn,
+.game-card:hover .move-btn {
     opacity: 1;
     pointer-events: auto;
+}
+.move-btn {
+    background: transparent;
+    border: 1px solid var(--border-light);
+    color: var(--text-muted);
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+.move-btn:hover {
+    background: rgba(124, 58, 237, 0.2);
+    border-color: var(--primary);
+    color: #fff;
+}
+body.is-moving .move-btn,
+body.is-moving .edit-btn {
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 .modal {
@@ -1292,7 +1337,8 @@ h1 {
 }
 
 @media (hover: none) {
-    .edit-btn {
+    .edit-btn,
+    .move-btn {
         opacity: 1;
         pointer-events: auto;
     }
@@ -1471,6 +1517,8 @@ let clearHoldTimer = null;
 
 const DELETE_HOLD_DURATION = 2500;
 let deleteHoldTimer = null;
+
+let movingCard = null;
 
 function lockPageScroll() {
     if (pageScrollLockCount === 0) {
@@ -2110,7 +2158,7 @@ function renderGames() {
         const ratingText = game.rating ? escapeHtml(String(game.rating)) : '—';
 
         return `
-            <div class="game-card" data-game-index="${index}" style="animation-delay: ${delay}s">
+            <div class="game-card" data-game-index="${index}" data-game-id="${game.id}" style="animation-delay: ${delay}s">
                 <div class="card-bg" style="background-image: ${bgImg}"></div>
                 <div class="card-content">
                     <img class="game-cover" src="${escapeHtml(coverSrc)}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
@@ -2135,6 +2183,7 @@ function renderGames() {
                                 Народная: ${ratingText}
                             </div>
                             <button class="action-btn edit-btn" type="button" data-index="${index}">Изменить</button>
+                            <button class="action-btn move-btn" type="button" data-index="${index}">Переместить</button>
                         </div>
                     </div>
                     
@@ -2565,6 +2614,57 @@ async function loadFromHash() {
     generateShareLink();
 }
 
+function clearDropTargets() {
+    document.querySelectorAll('.game-card.drop-target').forEach(el => {
+        el.classList.remove('drop-target');
+    });
+}
+
+function cancelMoving() {
+    if (movingCard) {
+        movingCard.classList.remove('moving');
+        movingCard = null;
+        document.body.classList.remove('is-moving');
+        clearDropTargets();
+    }
+}
+
+function swapCards(a, b) {
+    const aId = a.dataset.gameId;
+    const bId = b.dataset.gameId;
+    const aIdx = games.findIndex(g => String(g.id) === aId);
+    const bIdx = games.findIndex(g => String(g.id) === bId);
+
+    if (aIdx !== -1 && bIdx !== -1) {
+        const temp = games[aIdx];
+        games[aIdx] = games[bIdx];
+        games[bIdx] = temp;
+        saveGames();
+
+        const nextA = a.nextSibling;
+        const nextB = b.nextSibling;
+
+        if (nextA === b) {
+            gameList.insertBefore(b, a);
+        } else if (nextB === a) {
+            gameList.insertBefore(a, b);
+        } else {
+            gameList.insertBefore(a, nextB);
+            gameList.insertBefore(b, nextA);
+        }
+
+        Array.from(gameList.children).forEach((card, idx) => {
+            card.dataset.gameIndex = idx;
+            const cover = card.querySelector('.game-cover');
+            if (cover) cover.dataset.index = idx;
+            const editBtn = card.querySelector('.edit-btn');
+            if (editBtn) editBtn.dataset.index = idx;
+            const moveBtn = card.querySelector('.move-btn');
+            if (moveBtn) moveBtn.dataset.index = idx;
+        });
+    }
+}
+
 window.addEventListener('scroll', () => {
     if (window.scrollY > 300) {
         scrollToTopBtn.classList.add('show');
@@ -2601,6 +2701,22 @@ gameList.addEventListener('mouseout', function(e) {
     }
 });
 
+gameList.addEventListener('mouseover', function(e) {
+    if (!movingCard) return;
+    const card = e.target.closest('.game-card');
+    if (card && card !== movingCard) {
+        card.classList.add('drop-target');
+    }
+});
+
+gameList.addEventListener('mouseout', function(e) {
+    if (!movingCard) return;
+    const card = e.target.closest('.game-card');
+    if (card) {
+        card.classList.remove('drop-target');
+    }
+});
+
 searchInput.addEventListener('input', function () {
     clearTimeout(debounceTimer);
     const query = this.value;
@@ -2633,6 +2749,33 @@ document.addEventListener('click', function (e) {
 
 gameList.addEventListener('click', function (e) {
     const target = e.target;
+
+    const moveBtn = target.closest('.move-btn');
+    if (moveBtn) {
+        e.stopPropagation();
+        cancelMoving();
+        const card = moveBtn.closest('.game-card');
+        if (card) {
+            movingCard = card;
+            movingCard.classList.add('moving');
+            document.body.classList.add('is-moving');
+        }
+        return;
+    }
+
+    const card = target.closest('.game-card');
+
+    if (movingCard) {
+        if (card === movingCard) {
+            cancelMoving();
+            return;
+        }
+        if (card) {
+            swapCards(movingCard, card);
+            cancelMoving();
+            return;
+        }
+    }
 
     if (target.classList.contains('game-cover')) {
         if (isTransitioning || lightbox.classList.contains('active')) return;
@@ -3026,13 +3169,18 @@ function forceClose() {
 closeLightbox.addEventListener('click', closeLightboxFn);
 
 document.addEventListener('keydown', function(e) {
-    if (e.key !== 'Escape') return;
-    if (lightbox.classList.contains('active')) {
-        closeLightboxFn();
-    } else if (editModal.classList.contains('active')) {
-        closeEditModal();
-    } else if (suggestionsWrapper.classList.contains('active')) {
-        suggestionsWrapper.classList.remove('active');
+    if (e.key === 'Escape') {
+        if (movingCard) {
+            cancelMoving();
+            return;
+        }
+        if (lightbox.classList.contains('active')) {
+            closeLightboxFn();
+        } else if (editModal.classList.contains('active')) {
+            closeEditModal();
+        } else if (suggestionsWrapper.classList.contains('active')) {
+            suggestionsWrapper.classList.remove('active');
+        }
     }
 });
 

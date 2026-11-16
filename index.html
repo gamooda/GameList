@@ -636,44 +636,48 @@ h1 {
 
 .toast-container {
     position: fixed;
-    top: 24px;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 20px;
+    left: 20px;
     z-index: 30000;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
     pointer-events: none;
+    max-width: 280px;
 }
 .toast {
-    background: rgba(30, 30, 40, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 50px;
-    padding: 12px 24px;
+    background: rgba(24, 24, 30, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 3px solid var(--primary);
+    border-radius: 6px;
+    padding: 7px 12px;
     color: var(--text);
-    font-weight: 600;
-    font-size: 14px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1.35;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.55);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     opacity: 0;
-    transform: translateY(-20px) scale(0.9);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: translateX(-16px);
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     pointer-events: auto;
 }
 .toast.show {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateX(0);
 }
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--danger); }
+.toast.info { border-left-color: var(--primary); }
 .toast-icon {
-    font-size: 18px;
+    font-size: 13px;
+    flex-shrink: 0;
+    line-height: 1;
 }
-.toast.success .toast-icon { color: var(--success); }
-.toast.error .toast-icon { color: var(--danger); }
-.toast.info .toast-icon { color: var(--primary); }
 
 .backtop {
     position: fixed;
@@ -812,53 +816,31 @@ h1 {
 .loading-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(9, 9, 11, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    display: none;
-    flex-direction: column;
+    background: rgba(9, 9, 11, 0.35);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: flex;
     justify-content: center;
     align-items: center;
     z-index: 40000;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 .loading-overlay.active {
-    display: flex;
     opacity: 1;
-}
-.loader-logo {
-    font-size: 32px;
-    font-weight: 900;
-    margin-bottom: 24px;
-    background: var(--primary-grad);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: pulseLogo 2s infinite alternate;
-}
-@keyframes pulseLogo {
-    0% { opacity: 0.7; transform: scale(0.95); }
-    100% { opacity: 1; transform: scale(1.05); }
+    visibility: visible;
 }
 .spinner {
-    width: 50px;
-    height: 50px;
-    border: 3px solid rgba(255, 255, 255, 0.05);
+    width: 48px;
+    height: 48px;
+    border: 3px solid rgba(255, 255, 255, 0.08);
     border-top-color: var(--primary);
     border-radius: 50%;
-    animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-    margin-bottom: 16px;
+    animation: spin 0.85s cubic-bezier(0.5, 0, 0.5, 1) infinite;
 }
 @keyframes spin {
     to { transform: rotate(360deg); }
-}
-.loading-text {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-muted);
-    letter-spacing: 2px;
-    text-transform: uppercase;
 }
 
 @media (max-width: 640px) {
@@ -891,12 +873,9 @@ h1 {
         height: 18px;
     }
     .toast-container {
-        top: 16px;
-        width: 90%;
-    }
-    .toast {
-        width: 100%;
-        justify-content: center;
+        bottom: 16px;
+        left: 16px;
+        max-width: calc(100% - 80px);
     }
 }
 </style>
@@ -942,9 +921,7 @@ h1 {
 </div>
 
 <div class="loading-overlay" id="loadingOverlay">
-    <div class="loader-logo">Game Tracker</div>
     <div class="spinner"></div>
-    <div class="loading-text">Загрузка данных...</div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -987,6 +964,7 @@ let debounceTimer = null;
 let editingGameIndex = null;
 let deleteTimer = null;
 let isDeleting = false;
+let loaderTimer = null;
 
 let isDragging = false;
 let hasDragged = false;
@@ -1043,7 +1021,7 @@ function saveGames() {
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
+
     let icon = 'ℹ️';
     if (type === 'success') icon = '✅';
     if (type === 'error') icon = '❌';
@@ -1061,15 +1039,23 @@ function showToast(message, type = 'info') {
             if (toast.parentElement) {
                 toastContainer.removeChild(toast);
             }
-        }, 400);
-    }, 3000);
+        }, 320);
+    }, 2600);
 }
 
 function showLoader() {
-    loadingOverlay.classList.add('active');
+    if (loaderTimer) clearTimeout(loaderTimer);
+    loaderTimer = setTimeout(() => {
+        loadingOverlay.classList.add('active');
+        loaderTimer = null;
+    }, 150);
 }
 
 function hideLoader() {
+    if (loaderTimer) {
+        clearTimeout(loaderTimer);
+        loaderTimer = null;
+    }
     loadingOverlay.classList.remove('active');
 }
 
@@ -1088,13 +1074,13 @@ function renderGames() {
         return;
     }
     emptyState.style.display = 'none';
-    
+
     gameList.innerHTML = games.map((game, index) => {
         const bgImg = game.background_image ? `url('${game.background_image}')` : 'none';
-        
+
         const tagsHtml = (game.tags || []).map(tag => `<span class="game-tag-view">${escapeHtml(tag)}</span>`).join('');
         const userRatingHtml = game.userRating ? `<div class="user-rating-badge" style="background: ${RATING_COLORS[game.userRating]}">⭐ ${game.userRating} / 10</div>` : '';
-        
+
         let timeStr = '';
         if (game.userPlaytime) {
             const h = Math.floor(game.userPlaytime);
@@ -1102,7 +1088,7 @@ function renderGames() {
             timeStr = formatTime(h, m);
         }
         const userTimeHtml = timeStr ? `<span class="user-time-badge">⏱ Моё: ${timeStr}</span>` : '';
-        
+
         const notesPreview = game.notes ? `<div class="notes-preview">"${escapeHtml(game.notes)}"</div>` : '';
         const delay = Math.min(index * 0.04, 0.8);
 
@@ -1137,15 +1123,15 @@ function renderGames() {
 function renderEditModal() {
     if (editingGameIndex === null) return;
     const game = games[editingGameIndex];
-    
+
     const allTags = [...new Set([...PRESET_TAGS, ...(game.tags || [])])];
-    
+
     const ratingButtons = Array.from({length: 10}, (_, i) => {
         const val = i + 1;
         const isActive = game.userRating === val;
         return `<button class="rating-btn ${isActive ? 'active' : ''}" style="background: ${RATING_COLORS[val]}" data-val="${val}">${val}</button>`;
     }).join('');
-    
+
     const tagChips = allTags.map(tag => {
         const isSelected = game.tags && game.tags.includes(tag);
         return `<div class="tag-chip ${isSelected ? 'selected' : ''}" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</div>`;
@@ -1195,7 +1181,7 @@ function renderEditModal() {
             </div>
         </div>
     `;
-    
+
     resetDeleteState();
 }
 
@@ -1260,10 +1246,10 @@ function searchLocalGames(query) {
         suggestionsBox.innerHTML = '';
         return;
     }
-    
+
     const lowerQuery = query.toLowerCase();
     const filtered = [];
-    
+
     for (let i = 0; i < GAME_DATABASE.length; i++) {
         const game = GAME_DATABASE[i];
         if (game.name && game.name.toLowerCase().includes(lowerQuery)) {
@@ -1271,13 +1257,13 @@ function searchLocalGames(query) {
             if (filtered.length >= 10) break;
         }
     }
-    
+
     if (filtered.length === 0) {
         suggestionsBox.innerHTML = '<div style="padding:16px;color:var(--text-muted);text-align:center;">Ничего не найдено</div>';
         suggestionsBox.classList.add('active');
         return;
     }
-    
+
     suggestionsBox.innerHTML = filtered.map(game => `
         <div class="suggestion-item" data-game='${JSON.stringify({
             id: game.id,
@@ -1325,48 +1311,41 @@ function loadFromHash() {
         renderGames();
         return;
     }
-    
-    showLoader();
-    
-    setTimeout(() => {
-        const compressed = hash.slice(6);
-        try {
-            const json = LZString.decompressFromEncodedURIComponent(compressed);
-            if (!json) {
-                hideLoader();
-                renderGames();
-                return;
-            }
-            const data = JSON.parse(json);
-            if (Array.isArray(data) && data.length > 0) {
-                games = data.map(g => {
-                    const dbGame = GAME_DATABASE.find(db => db.id === g.i);
-                    return {
-                        id: g.i,
-                        name: dbGame ? dbGame.name : 'Unknown',
-                        background_image: dbGame ? dbGame.background_image : null,
-                        rating: dbGame ? dbGame.rating : 0,
-                        playtime: dbGame ? dbGame.playtime : 0,
-                        released: dbGame ? dbGame.released : '',
-                        userRating: g.r || null,
-                        userPlaytime: g.p || null,
-                        tags: g.t || [],
-                        notes: g.n || ''
-                    };
-                });
-                saveGames();
-                renderGames();
-                showToast('Список загружен по ссылке', 'success');
-            } else {
-                hideLoader();
-                renderGames();
-            }
-        } catch (e) {
-            console.error(e);
-            hideLoader();
+
+    const compressed = hash.slice(6);
+    try {
+        const json = LZString.decompressFromEncodedURIComponent(compressed);
+        if (!json) {
+            renderGames();
+            return;
+        }
+        const data = JSON.parse(json);
+        if (Array.isArray(data) && data.length > 0) {
+            games = data.map(g => {
+                const dbGame = GAME_DATABASE.find(db => db.id === g.i);
+                return {
+                    id: g.i,
+                    name: dbGame ? dbGame.name : 'Unknown',
+                    background_image: dbGame ? dbGame.background_image : null,
+                    rating: dbGame ? dbGame.rating : 0,
+                    playtime: dbGame ? dbGame.playtime : 0,
+                    released: dbGame ? dbGame.released : '',
+                    userRating: g.r || null,
+                    userPlaytime: g.p || null,
+                    tags: g.t || [],
+                    notes: g.n || ''
+                };
+            });
+            saveGames();
+            renderGames();
+            showToast('Список загружен по ссылке', 'success');
+        } else {
             renderGames();
         }
-    }, 300);
+    } catch (e) {
+        console.error(e);
+        renderGames();
+    }
 }
 
 window.addEventListener('scroll', () => {
@@ -1384,16 +1363,16 @@ scrollToTopBtn.addEventListener('click', () => {
 gameList.addEventListener('mousemove', function(e) {
     const cover = e.target.closest('.game-cover');
     if (!cover) return;
-    
+
     const rect = cover.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    
+
     const rotateX = ((y - centerY) / centerY) * -10;
     const rotateY = ((x - centerX) / centerX) * 10;
-    
+
     cover.style.transform = `scale(1.02) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
 });
 
@@ -1425,7 +1404,7 @@ document.addEventListener('click', function (e) {
 
 gameList.addEventListener('click', function (e) {
     const target = e.target;
-    
+
     if (target.classList.contains('game-cover')) {
         if (isTransitioning) return;
         const index = parseInt(target.dataset.index);
@@ -1451,16 +1430,16 @@ modalContent.addEventListener('click', function (e) {
         const hInput = document.getElementById('modalHoursInput');
         const mInput = document.getElementById('modalMinsInput');
         const notesInput = document.getElementById('modalNotesInput');
-        
+
         let h = parseFloat(hInput.value) || 0;
         let m = parseFloat(mInput.value) || 0;
         if (h < 0) h = 0;
         if (m < 0) m = 0;
         if (m > 59) m = 59;
-        
+
         game.userPlaytime = h + (m / 60);
         game.notes = notesInput.value;
-        
+
         saveGames();
         renderGames();
         closeEditModal();
@@ -1526,7 +1505,7 @@ modalContent.addEventListener('click', function (e) {
         const val = parseInt(target.dataset.val);
         game.userRating = (game.userRating === val) ? null : val;
         saveGames();
-        
+
         const buttons = document.querySelectorAll('#modalRatingPicker .rating-btn');
         buttons.forEach(btn => {
             if (parseInt(btn.dataset.val) === game.userRating) {
@@ -1568,17 +1547,17 @@ function openLightbox(index, targetElement) {
     const imgUrl = games[index].background_image;
     lightboxImgFront.src = imgUrl;
     lightboxImgBack.src = imgUrl;
-    
+
     scrollY = window.scrollY;
     document.documentElement.classList.add('modal-open');
     document.body.classList.add('modal-open');
-    
+
     targetElement.style.opacity = '0';
-    
+
     lightboxCard.style.transition = 'none';
     lightboxImgFront.style.transition = 'none';
     lightboxImgBack.style.transition = 'none';
-    
+
     lightbox.classList.add('active');
 
     const startRect = targetElement.getBoundingClientRect();
@@ -1605,7 +1584,7 @@ function openLightbox(index, targetElement) {
         const maxH = window.innerHeight * 0.85;
         let finalW = tempImg.width;
         let finalH = tempImg.height;
-        
+
         const ratio = Math.min(maxW / finalW, maxH / finalH);
         if (ratio < 1) {
             finalW *= ratio;
@@ -1654,9 +1633,9 @@ function spinLoop(time) {
         lastTime = time;
 
         if (isSpinning && !isDragging) {
-            currentRotation.y += deltaTime * 0.03; 
+            currentRotation.y += deltaTime * 0.03;
             if (currentRotation.y > 360) currentRotation.y -= 360;
-            
+
             let targetTiltX = Math.sin(currentRotation.y * Math.PI / 180) * 10;
             currentRotation.x += (targetTiltX - currentRotation.x) * 0.05;
 
@@ -1681,16 +1660,16 @@ window.addEventListener('mousemove', function(e) {
             x: e.clientX - previousMousePosition.x,
             y: e.clientY - previousMousePosition.y
         };
-        
+
         if (Math.abs(deltaMove.x) > 2 || Math.abs(deltaMove.y) > 2) {
             hasDragged = true;
         }
 
         currentRotation.y += deltaMove.x * 0.5;
         currentRotation.x -= deltaMove.y * 0.5;
-        
+
         lightboxCard.style.transform = `translate(-50%, -50%) rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
-        
+
         previousMousePosition = { x: e.clientX, y: e.clientY };
     }
 });
@@ -1760,14 +1739,14 @@ function forceClose() {
 
     lightboxCard.style.transition = '';
     lightboxCard.style.transform = '';
-    lightboxCard.style.cssText = ''; 
+    lightboxCard.style.cssText = '';
     lightboxImgFront.style.cssText = '';
     lightboxImgBack.style.cssText = '';
     currentRotation = { x: 0, y: 0 };
     isSpinning = false;
     isDragging = false;
     hasDragged = false;
-    
+
     if (activeTargetElement) {
         activeTargetElement.style.opacity = '1';
         activeTargetElement = null;

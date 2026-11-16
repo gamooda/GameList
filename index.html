@@ -143,6 +143,7 @@ h1 {
     flex-wrap: wrap;
     flex: 1;
     justify-content: flex-end;
+    align-items: center;
 }
 .share-bar input {
     padding: 8px 12px;
@@ -194,6 +195,61 @@ h1 {
 .btn-success:hover {
     background: #059669;
     transform: translateY(-1px);
+}
+
+.clear-btn {
+    position: relative;
+    overflow: hidden;
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: var(--danger);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    flex-shrink: 0;
+}
+.clear-btn:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: var(--danger);
+}
+.clear-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+.clear-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--danger);
+    transform: scaleX(0);
+    transform-origin: left center;
+    z-index: 0;
+    pointer-events: none;
+}
+.clear-btn.holding {
+    color: #fff;
+    border-color: var(--danger);
+}
+.clear-btn.holding::before {
+    transform: scaleX(1);
+    transition: transform 2.5s linear;
+}
+.clear-btn span {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+}
+.clear-btn.cleared {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
 }
 
 .search-section {
@@ -614,6 +670,7 @@ h1 {
     margin-top: 4px;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: anywhere;
@@ -1240,6 +1297,9 @@ h1 {
         <div class="share-bar">
             <input type="text" id="shareLinkInput" placeholder="Поделиться списком" readonly tabindex="-1">
             <button class="btn btn-primary" id="copyShareBtn" type="button">Копировать</button>
+            <button class="clear-btn" id="clearAllBtn" type="button">
+                <span>Очистить</span>
+            </button>
         </div>
     </header>
 
@@ -1315,6 +1375,7 @@ const gameList = document.getElementById('gameList');
 const emptyState = document.getElementById('emptyState');
 const shareLinkInput = document.getElementById('shareLinkInput');
 const copyShareBtn = document.getElementById('copyShareBtn');
+const clearAllBtn = document.getElementById('clearAllBtn');
 const toastContainer = document.getElementById('toastContainer');
 const editModal = document.getElementById('editModal');
 const modalBg = document.getElementById('modalBg');
@@ -1353,6 +1414,9 @@ let imgLoadTimer = null;
 let pageScrollLockCount = 0;
 let pageScrollY = 0;
 
+const CLEAR_HOLD_DURATION = 2500;
+let clearHoldTimer = null;
+
 function lockPageScroll() {
     if (pageScrollLockCount === 0) {
         pageScrollY = window.scrollY;
@@ -1380,6 +1444,39 @@ function unlockPageScroll() {
         document.body.classList.remove('modal-open');
         window.scrollTo(0, pageScrollY);
     }
+}
+
+function startClearHold(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (games.length === 0) return;
+    e.preventDefault();
+    try {
+        clearAllBtn.setPointerCapture(e.pointerId);
+    } catch (err) {}
+    cancelClearHold();
+    clearAllBtn.classList.add('holding');
+    clearHoldTimer = setTimeout(() => {
+        clearHoldTimer = null;
+        clearAllBtn.classList.remove('holding');
+        performClearAll();
+    }, CLEAR_HOLD_DURATION);
+}
+
+function cancelClearHold() {
+    if (clearHoldTimer) {
+        clearTimeout(clearHoldTimer);
+        clearHoldTimer = null;
+    }
+    clearAllBtn.classList.remove('holding');
+}
+
+function performClearAll() {
+    games = [];
+    saveGames();
+    renderGames();
+    clearAllBtn.classList.add('cleared');
+    showToast('Список очищен', 'success');
+    setTimeout(() => clearAllBtn.classList.remove('cleared'), 400);
 }
 
 function getPlaytimeColor(hours) {
@@ -1885,6 +1982,7 @@ function checkScroll() {
 
 function renderGames() {
     hideLoader();
+    clearAllBtn.disabled = games.length === 0;
     if (games.length === 0) {
         gameList.innerHTML = '';
         emptyState.style.display = 'block';
@@ -2552,6 +2650,13 @@ modalContent.addEventListener('keydown', function(e) {
 });
 
 modalBg.addEventListener('click', closeEditModal);
+
+clearAllBtn.addEventListener('pointerdown', startClearHold);
+clearAllBtn.addEventListener('pointerup', cancelClearHold);
+clearAllBtn.addEventListener('pointercancel', cancelClearHold);
+clearAllBtn.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+});
 
 function clearLightboxTimers() {
     if (openFallTimer) {

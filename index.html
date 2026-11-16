@@ -1761,7 +1761,7 @@ async function inflateRaw(bytes) {
     return out;
 }
 
-function packGamesCompact(list) {
+function packGamesCompactV2(list) {
     const sorted = [...list].sort((a, b) => {
         const aid = Number(a.id), bid = Number(b.id);
         if (Number.isFinite(aid) && Number.isFinite(bid)) return aid - bid;
@@ -1835,7 +1835,74 @@ function packGamesCompact(list) {
     return new Uint8Array(out);
 }
 
-function unpackGamesCompact(bytes) {
+function packGamesCompactV3(list) {
+    const out = [];
+    out.push(3);
+    writeVarint(out, list.length);
+    
+    const encoder = new TextEncoder();
+    
+    for (const g of list) {
+        const rating = Math.max(0, Math.min(10, Math.round(g.userRating) || 0));
+        const minutes = Math.round((g.userPlaytime || 0) * 60);
+        const tags = g.tags || [];
+        const notes = g.notes || '';
+        const custom = tags.filter(t => !PRESET_TAGS.includes(t));
+        
+        let mask = 0;
+        PRESET_TAGS.forEach((t, i) => {
+            if (tags.includes(t)) mask |= (1 << i);
+        });
+        
+        const hasPreset = mask !== 0;
+        const hasCustom = custom.length > 0;
+        const hasPlaytime = minutes > 0;
+        const hasNotes = notes.length > 0;
+        
+        out.push(
+            (rating & 0x0f) |
+            (hasPreset ? 0x10 : 0) |
+            (hasCustom ? 0x20 : 0) |
+            (hasPlaytime ? 0x40 : 0) |
+            (hasNotes ? 0x80 : 0)
+        );
+        
+        const idNum = Number(g.id);
+        if (Number.isSafeInteger(idNum) && idNum > 0) {
+            writeVarint(out, idNum);
+        } else {
+            writeVarint(out, 0);
+            const b = encoder.encode(String(g.id));
+            writeVarint(out, b.length);
+            for (const x of b) out.push(x);
+        }
+        
+        if (hasPlaytime) writeVarint(out, minutes);
+        
+        if (hasPreset) {
+            out.push(mask & 0xff, (mask >> 8) & 0xff);
+        }
+        
+        if (hasCustom) {
+            writeVarint(out, custom.length);
+            for (const t of custom) {
+                const b = encoder.encode(t);
+                writeVarint(out, b.length);
+                for (const x of b) out.push(x);
+            }
+        }
+        
+        if (hasNotes) {
+            const b = encoder.encode(notes);
+            writeVarint(out, b.length);
+            for (const x of b) out.push(x);
+        }
+    }
+    
+    return new Uint8Array(out);
+}
+
+function unpackGamesCompactV2(bytes) {
     const reader = createReader(bytes);
     const decoder = new TextDecoder();
     const count = reader.varint();
@@ -1861,6 +1928,74 @@ function unpackGamesCompact(bytes) {
         } else {
             id = prevId + delta - 1;
             prevId = id;
+        }
+        
+        let minutes = 0;
+        if (hasPlaytime) minutes = reader.varint();
+        
+        let tags = [];
+        if (hasPreset) {
+            const mask = reader.byte() | (reader.byte() << 8);
+            PRESET_TAGS.forEach((t, idx) => {
+                if (mask & (1 << idx)) tags.push(t);
+            });
+        }
+        if (hasCustom) {
+            const cc = reader.varint();
+            if (cc > 30) throw new Error('Too many tags');
+            for (let j = 0; j < cc; j++) {
+                const len = reader.varint();
+                if (len > 200) throw new Error('Tag too long');
+                tags.push(decoder.decode(reader.bytes(len)));
+            }
+        }
+        
+        let notes = '';
+        if (hasNotes) {
+            const len = reader.varint();
+            if (len > 8000) throw new Error('Notes too long');
+            notes = decoder.decode(reader.bytes(len));
+        }
+        
+        entries.push({
+            i: id,
+            r: rating,
+            p: minutes > 0 ? minutes / 60 : 0,
+            t: tags,
+            n: notes
+        });
+    }
+    
+    return entries;
+}
+
+function unpackGamesCompactV3(bytes) {
+    const reader = createReader(bytes);
+    const decoder = new TextDecoder();
+    
+    if (reader.byte() !== 3) throw new Error('Unsupported format');
+    
+    const count = reader.varint();
+    if (count > 1000) throw new Error('Too many games');
+    
+    const entries = [];
+    
+    for (let i = 0; i < count; i++) {
+        const header = reader.byte();
+        const rating = header & 0x0f;
+        const hasPreset = (header & 0x10) !== 0;
+        const hasCustom = (header & 0x20) !== 0;
+        const hasPlaytime = (header & 0x40) !== 0;
+        const hasNotes = (header & 0x80) !== 0;
+        
+        const idNum = reader.varint();
+        let id;
+        if (idNum === 0) {
+            const len = reader.varint();
+            if (len > 200) throw new Error('ID too long');
+            id = decoder.decode(reader.bytes(len));
+        } else {
+            id = idNum;
         }
         
         let minutes = 0;
@@ -2494,7 +2629,7 @@ async function generateShareLink() {
     const candidates = [];
 
     try {
-        const packed = packGamesCompact(games);
+        const packed = packGamesCompactV3(games);
         const raw = bytesToBase64Url(packed);
         candidates.push({ url: baseUrl + '#r=' + raw, len: raw.length });
 
@@ -2542,7 +2677,16 @@ async function loadFromHash() {
             let entries = null;
 
             if (isR) {
-                entries = unpackGamesCompact(base64UrlToBytes(payload));
+                const bytes = base64UrlToBytes(payload);
+                try {
+                    if (bytes[0] === 3) {
+                        entries = unpackGamesCompactV3(bytes);
+                    } else {
+                        entries = unpackGamesCompactV2(bytes);
+                    }
+                } catch (err) {
+                    entries = unpackGamesCompactV2(bytes);
+                }
             } else if (isC) {
                 if (typeof DecompressionStream === 'undefined') {
                     showToast('Обнови браузер, чтобы открыть эту ссылку', 'error');
@@ -2550,7 +2694,16 @@ async function loadFromHash() {
                     generateShareLink();
                     return;
                 }
-                entries = unpackGamesCompact(await inflateRaw(base64UrlToBytes(payload)));
+                const bytes = await inflateRaw(base64UrlToBytes(payload));
+                try {
+                    if (bytes[0] === 3) {
+                        entries = unpackGamesCompactV3(bytes);
+                    } else {
+                        entries = unpackGamesCompactV2(bytes);
+                    }
+                } catch (err) {
+                    entries = unpackGamesCompactV2(bytes);
+                }
             } else if (isS) {
                 if (typeof LZString === 'undefined') {
                     showToast('Библиотека сжатия не загрузилась', 'error');

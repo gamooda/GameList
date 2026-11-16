@@ -608,6 +608,15 @@ h1 {
     border-color: var(--danger);
     color: #fff;
 }
+.action-btn.cancel {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border-light);
+}
+.action-btn.cancel:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--text);
+}
 .edit-btn {
     opacity: 0;
     pointer-events: none;
@@ -1270,6 +1279,7 @@ let editingGameIndex = null;
 let deleteTimer = null;
 let isDeleting = false;
 let loaderTimer = null;
+let isNewGameModal = false;
 
 let isDragging = false;
 let hasDragged = false;
@@ -1552,6 +1562,7 @@ function renderEditModal() {
             
             <div class="edit-actions">
                 <button class="action-btn btn-success" id="modalSaveBtn">Сохранить</button>
+                <button class="action-btn cancel" id="modalCancelBtn">Отмена</button>
                 <button class="action-btn delete" id="modalDeleteBtn">Удалить</button>
             </div>
         </div>
@@ -1581,6 +1592,11 @@ function openEditModal(index) {
 }
 
 function closeEditModal() {
+    if (isNewGameModal) {
+        games.shift();
+        isNewGameModal = false;
+        renderGames();
+    }
     editModal.classList.remove('active');
     document.documentElement.classList.remove('modal-open');
     document.body.classList.remove('modal-open');
@@ -1606,12 +1622,12 @@ function addGameFromSearch(gameData) {
         tags: [],
         notes: ''
     });
-    saveGames();
-    renderGames();
+    
+    isNewGameModal = true;
     searchInput.value = '';
     suggestionsWrapper.classList.remove('active');
     suggestionsScroll.innerHTML = '';
-    showToast('Игра добавлена. Нажмите Изменить.', 'success');
+    
     openEditModal(0);
 }
 
@@ -1836,6 +1852,7 @@ gameList.addEventListener('click', function (e) {
 
     if (target.classList.contains('edit-btn')) {
         const index = parseInt(target.dataset.index);
+        isNewGameModal = false;
         openEditModal(index);
         return;
     }
@@ -1860,16 +1877,28 @@ modalContent.addEventListener('click', function (e) {
         game.userPlaytime = h + (m / 60);
         game.notes = notesInput.value;
 
+        if (isNewGameModal) {
+            isNewGameModal = false;
+            showToast('Игра добавлена', 'success');
+        } else {
+            showToast('Сохранено', 'success');
+        }
+
         saveGames();
         renderGames();
         closeEditModal();
-        showToast('Сохранено', 'success');
+        return;
+    }
+
+    if (target.id === 'modalCancelBtn') {
+        closeEditModal();
         return;
     }
 
     if (target.id === 'modalDeleteBtn') {
         const btn = document.getElementById('modalDeleteBtn');
         if (isDeleting) {
+            isNewGameModal = false;
             games.splice(editingGameIndex, 1);
             saveGames();
             renderGames();
@@ -1907,7 +1936,6 @@ modalContent.addEventListener('click', function (e) {
             if (!game.tags) game.tags = [];
             if (!game.tags.includes(tag)) {
                 game.tags.push(tag);
-                saveGames();
                 renderEditModal();
                 setTimeout(() => {
                     const newInput = document.getElementById('customTagInput');
@@ -1924,7 +1952,6 @@ modalContent.addEventListener('click', function (e) {
     if (target.classList.contains('rating-btn')) {
         const val = parseInt(target.dataset.val);
         game.userRating = (game.userRating === val) ? null : val;
-        saveGames();
 
         const buttons = document.querySelectorAll('#modalRatingPicker .rating-btn');
         buttons.forEach(btn => {
@@ -1947,7 +1974,6 @@ modalContent.addEventListener('click', function (e) {
             game.tags.push(tag);
             target.classList.add('selected');
         }
-        saveGames();
         return;
     }
 });

@@ -60,15 +60,18 @@ input[type=number] {
     --primary-hover: #6d28d9;
     --danger: #ef4444;
     --success: #10b981;
+    color-scheme: dark;
 }
 
 html {
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: #333338 var(--bg);
+    background-color: var(--bg);
 }
 html, body {
     overflow-x: hidden;
+    background-color: var(--bg);
 }
 html.modal-open, body.modal-open {
     overflow: hidden !important;
@@ -1395,6 +1398,42 @@ function sanitizeUserFields(g) {
     return { userRating, userPlaytime, tags, notes };
 }
 
+function packGamesString(list) {
+    return list.map(g => {
+        let mask = 0;
+        const custom = [];
+        (g.tags || []).forEach(t => {
+            const idx = PRESET_TAGS.indexOf(t);
+            if (idx !== -1) mask |= (1 << idx);
+            else custom.push(t.replace(/[|;:]/g, ''));
+        });
+        const tPart = mask || custom.length ? mask.toString(36) + (custom.length ? ':' + custom.join(',') : '') : '';
+        return `${g.id}|${g.userRating || 0}|${g.userPlaytime || 0}|${tPart}|${(g.notes || '').replace(/[|;]/g, '')}`;
+    }).join(';');
+}
+
+function unpackGamesString(str) {
+    return str.split(';').filter(Boolean).map(part => {
+        const [idStr, r, p, tPart, n] = part.split('|');
+        let tags = [];
+        if (tPart) {
+            const [maskStr, customStr] = tPart.split(':');
+            const mask = parseInt(maskStr, 36) || 0;
+            PRESET_TAGS.forEach((tag, i) => {
+                if (mask & (1 << i)) tags.push(tag);
+            });
+            if (customStr) tags.push(...customStr.split(','));
+        }
+        return {
+            i: isNaN(Number(idStr)) ? idStr : Number(idStr),
+            r: parseInt(r, 10) || 0,
+            p: parseFloat(p) || 0,
+            t: tags,
+            n: n || ''
+        };
+    });
+}
+
 function writeVarint(out, value) {
     let v = Math.max(0, Math.floor(Number(value) || 0));
     while (v >= 128) {
@@ -2033,15 +2072,23 @@ async function generateShareLink() {
     }
     const baseUrl = window.location.origin + window.location.pathname;
     let url = '';
-    if (typeof CompressionStream !== 'undefined') {
+    
+    if (typeof LZString !== 'undefined') {
+        try {
+            const str = packGamesString(games);
+            const compressed = LZString.compressToEncodedURIComponent(str);
+            url = `${baseUrl}#s=${compressed}`;
+        } catch (e) {}
+    }
+    
+    if (!url && typeof CompressionStream !== 'undefined') {
         try {
             const packed = packGamesV2(games);
             const deflated = await deflateRaw(packed);
             url = `${baseUrl}#d=${bytesToBase64Url(deflated)}`;
-        } catch (e) {
-            url = '';
-        }
+        } catch (e) {}
     }
+    
     if (!url && typeof LZString !== 'undefined') {
         const data = games.map(g => ({
             i: g.id,
@@ -2052,6 +2099,7 @@ async function generateShareLink() {
         }));
         url = `${baseUrl}#data=${LZString.compressToEncodedURIComponent(JSON.stringify(data))}`;
     }
+    
     if (token === shareGenToken) {
         shareLinkInput.value = url;
     }
@@ -2059,61 +2107,75 @@ async function generateShareLink() {
 
 async function loadFromHash() {
     const hash = window.location.hash;
+    const isS = hash.startsWith('#s=');
     const isV2 = hash.startsWith('#d=');
     const isV1 = hash.startsWith('#data=');
-    if (isV2 || isV1) {
-        const payload = isV2 ? hash.slice(3) : hash.slice(6);
+    
+    if (isS || isV2 || isV1) {
+        const payload = isS ? hash.slice(3) : (isV2 ? hash.slice(3) : hash.slice(6));
+        
+        if (isS && typeof LZString === 'undefined') {
+            showToast('Библиотека сжатия не загрузилась', 'error');
+            renderGames();
+            generateShareLink();
+            return;
+        }
+        
         if (isV2 && typeof DecompressionStream === 'undefined') {
             showToast('Обнови браузер, чтобы открыть эту ссылку', 'error');
-        } else if (isV1 && typeof LZString === 'undefined') {
-            showToast('Библиотека сжатия не загрузилась', 'error');
-        } else {
-            try {
-                if (payload.length > 200000) throw new Error('Payload too large');
-                let entries = null;
-                if (isV2) {
-                    entries = unpackGamesV2(await inflateRaw(base64UrlToBytes(payload)));
-                } else {
-                    const json = LZString.decompressFromEncodedURIComponent(payload);
-                    entries = json ? JSON.parse(json) : null;
-                }
-                if (Array.isArray(entries) && entries.length > 0) {
-                    const seen = new Set();
-                    const imported = [];
-                    for (const g of entries) {
-                        if (!g || typeof g !== 'object' || g.i === undefined || g.i === null) continue;
-                        const key = String(g.i);
-                        if (seen.has(key)) continue;
-                        seen.add(key);
-                        const dbGame = dbById.get(key);
-                        imported.push({
-                            id: dbGame ? dbGame.id : g.i,
-                            name: dbGame && typeof dbGame.name === 'string' ? dbGame.name : 'Unknown',
-                            background_image: dbGame ? dbGame.background_image : null,
-                            rating: dbGame ? dbGame.rating : 0,
-                            playtime: dbGame ? dbGame.playtime : 0,
-                            released: dbGame ? dbGame.released : '',
-                            ...sanitizeUserFields({ userRating: g.r, userPlaytime: g.p, tags: g.t, notes: g.n })
-                        });
-                        if (imported.length >= 1000) break;
-                    }
-                    if (imported.length > 0) {
-                        if (editModal.classList.contains('active')) closeEditModal();
-                        if (lightbox.classList.contains('active')) {
-                            lightbox.classList.remove('active');
-                            forceClose();
-                        }
-                        games = imported;
-                        saveGames();
-                        showToast('Список загружен по ссылке', 'success');
-                        try {
-                            history.replaceState(null, '', window.location.pathname + window.location.search);
-                        } catch (err) {}
-                    }
-                }
-            } catch (e) {
-                showToast('Не удалось прочитать ссылку', 'error');
+            renderGames();
+            generateShareLink();
+            return;
+        }
+        
+        try {
+            let entries = null;
+            if (isS) {
+                const str = LZString.decompressFromEncodedURIComponent(payload);
+                entries = str ? unpackGamesString(str) : null;
+            } else if (isV2) {
+                entries = unpackGamesV2(await inflateRaw(base64UrlToBytes(payload)));
+            } else {
+                const json = LZString.decompressFromEncodedURIComponent(payload);
+                entries = json ? JSON.parse(json) : null;
             }
+            
+            if (Array.isArray(entries) && entries.length > 0) {
+                const seen = new Set();
+                const imported = [];
+                for (const g of entries) {
+                    if (!g || typeof g !== 'object' || g.i === undefined || g.i === null) continue;
+                    const key = String(g.i);
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    const dbGame = dbById.get(key);
+                    imported.push({
+                        id: dbGame ? dbGame.id : g.i,
+                        name: dbGame && typeof dbGame.name === 'string' ? dbGame.name : 'Unknown',
+                        background_image: dbGame ? dbGame.background_image : null,
+                        rating: dbGame ? dbGame.rating : 0,
+                        playtime: dbGame ? dbGame.playtime : 0,
+                        released: dbGame ? dbGame.released : '',
+                        ...sanitizeUserFields({ userRating: g.r, userPlaytime: g.p, tags: g.t, notes: g.n })
+                    });
+                    if (imported.length >= 1000) break;
+                }
+                if (imported.length > 0) {
+                    if (editModal.classList.contains('active')) closeEditModal();
+                    if (lightbox.classList.contains('active')) {
+                        lightbox.classList.remove('active');
+                        forceClose();
+                    }
+                    games = imported;
+                    saveGames();
+                    showToast('Список загружен по ссылке', 'success');
+                    try {
+                        history.replaceState(null, '', window.location.pathname + window.location.search);
+                    } catch (err) {}
+                }
+            }
+        } catch (e) {
+            showToast('Не удалось прочитать ссылку', 'error');
         }
     }
     renderGames();

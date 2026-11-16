@@ -34,10 +34,12 @@ input, textarea {
 input[type=number]::-webkit-inner-spin-button, 
 input[type=number]::-webkit-outer-spin-button { 
     -webkit-appearance: none; 
+    appearance: none;
     margin: 0; 
 }
 input[type=number] {
     -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 :root {
@@ -245,7 +247,6 @@ h1 {
     align-items: start;
 }
 
-/* Анимация появления карточек */
 @keyframes cardAppear {
     from {
         opacity: 0;
@@ -413,7 +414,6 @@ h1 {
     pointer-events: auto;
 }
 
-/* Modal */
 .modal {
     position: fixed;
     inset: 0;
@@ -634,7 +634,6 @@ h1 {
     animation: cardAppear 0.5s ease backwards;
 }
 
-/* Уведомления (Toasts) */
 .toast-container {
     position: fixed;
     top: 24px;
@@ -676,7 +675,6 @@ h1 {
 .toast.error .toast-icon { color: var(--danger); }
 .toast.info .toast-icon { color: var(--primary); }
 
-/* Кнопка Наверх */
 .backtop {
     position: fixed;
     bottom: 30px;
@@ -712,7 +710,6 @@ h1 {
     height: 22px;
 }
 
-/* Lightbox */
 .lightbox {
     position: fixed;
     top: 0;
@@ -812,7 +809,6 @@ h1 {
     box-shadow: 0 0px 0 #0a0a0f, 0 2px 5px rgba(0,0,0,0.8);
 }
 
-/* Загрузочный экран */
 .loading-overlay {
     position: fixed;
     inset: 0;
@@ -837,6 +833,7 @@ h1 {
     margin-bottom: 24px;
     background: var(--primary-grad);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     animation: pulseLogo 2s infinite alternate;
 }

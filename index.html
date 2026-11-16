@@ -62,6 +62,7 @@ input[type=number] {
 
 html, body {
     overflow-x: hidden;
+    resize: none;
 }
 html.modal-open, body.modal-open {
     overflow: hidden !important;
@@ -83,6 +84,7 @@ body {
 .app {
     max-width: 1000px;
     width: 100%;
+    resize: none;
 }
 header {
     display: flex;
@@ -663,6 +665,7 @@ h1 {
     transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     max-height: 90vh;
     overflow-y: auto;
+    resize: none;
 }
 .modal.active .modal-content {
     transform: translateY(0) scale(1);
@@ -833,7 +836,7 @@ h1 {
     background: rgba(0,0,0,0.3);
     color: var(--text);
     font-size: 14px;
-    resize: vertical;
+    resize: none;
     min-height: 80px;
     max-height: 200px;
     outline: none;

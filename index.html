@@ -691,10 +691,44 @@ h1 {
     background: rgba(255,255,255,0.1);
     color: var(--text);
 }
+.action-btn.delete {
+    position: relative;
+    overflow: hidden;
+    background: rgba(239, 68, 68, 0.06);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: var(--danger);
+    touch-action: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
 .action-btn.delete:hover {
-    background: var(--danger);
+    background: rgba(239, 68, 68, 0.15);
     border-color: var(--danger);
+    color: var(--danger);
+}
+.action-btn.delete::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--danger);
+    transform: scaleX(0);
+    transform-origin: left center;
+    z-index: 0;
+    pointer-events: none;
+}
+.action-btn.delete.holding {
     color: #fff;
+    border-color: var(--danger);
+}
+.action-btn.delete.holding::before {
+    transform: scaleX(1);
+    transition: transform 2.5s linear;
+}
+.action-btn.delete span {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
 }
 .action-btn.cancel {
     background: transparent;
@@ -1392,8 +1426,6 @@ let games = [];
 let debounceTimer = null;
 let editingGameIndex = null;
 let editingDraft = null;
-let deleteTimer = null;
-let isDeleting = false;
 let loaderTimer = null;
 let isNewGameModal = false;
 let shareGenToken = 0;
@@ -1416,6 +1448,9 @@ let pageScrollY = 0;
 
 const CLEAR_HOLD_DURATION = 2500;
 let clearHoldTimer = null;
+
+const DELETE_HOLD_DURATION = 2500;
+let deleteHoldTimer = null;
 
 function lockPageScroll() {
     if (pageScrollLockCount === 0) {
@@ -1477,6 +1512,42 @@ function performClearAll() {
     clearAllBtn.classList.add('cleared');
     showToast('Список очищен', 'success');
     setTimeout(() => clearAllBtn.classList.remove('cleared'), 400);
+}
+
+function startDeleteHold(e) {
+    const btn = e.currentTarget;
+    if (e.button !== undefined && e.button !== 0) return;
+    if (editingGameIndex === null || !editingDraft) return;
+    e.preventDefault();
+    try {
+        btn.setPointerCapture(e.pointerId);
+    } catch (err) {}
+    cancelDeleteHold();
+    btn.classList.add('holding');
+    deleteHoldTimer = setTimeout(() => {
+        deleteHoldTimer = null;
+        btn.classList.remove('holding');
+        performDelete();
+    }, DELETE_HOLD_DURATION);
+}
+
+function cancelDeleteHold() {
+    if (deleteHoldTimer) {
+        clearTimeout(deleteHoldTimer);
+        deleteHoldTimer = null;
+    }
+    const btn = document.getElementById('modalDeleteBtn');
+    if (btn) btn.classList.remove('holding');
+}
+
+function performDelete() {
+    if (editingGameIndex === null) return;
+    isNewGameModal = false;
+    games.splice(editingGameIndex, 1);
+    saveGames();
+    renderGames();
+    closeEditModal();
+    showToast('Игра удалена', 'success');
 }
 
 function getPlaytimeColor(hours) {
@@ -2116,26 +2187,20 @@ function renderEditModal() {
             <div class="edit-actions">
                 <button class="action-btn btn-success" type="button" id="modalSaveBtn">Сохранить</button>
                 <button class="action-btn cancel" type="button" id="modalCancelBtn">Отмена</button>
-                <button class="action-btn delete" type="button" id="modalDeleteBtn">Удалить</button>
+                <button class="action-btn delete" type="button" id="modalDeleteBtn"><span>Удалить (удерживайте)</span></button>
             </div>
         </div>
     `;
 
-    resetDeleteState();
-}
+    cancelDeleteHold();
 
-function resetDeleteState() {
-    if (deleteTimer) {
-        clearInterval(deleteTimer);
-        deleteTimer = null;
-    }
-    isDeleting = false;
-    const btn = document.getElementById('modalDeleteBtn');
-    if (btn) {
-        btn.textContent = 'Удалить';
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        btn.style.cursor = 'pointer';
+    const deleteBtn = document.getElementById('modalDeleteBtn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('pointerdown', startDeleteHold);
+        deleteBtn.addEventListener('pointerup', cancelDeleteHold);
+        deleteBtn.addEventListener('pointercancel', cancelDeleteHold);
+        deleteBtn.addEventListener('pointerleave', cancelDeleteHold);
+        deleteBtn.addEventListener('contextmenu', (ev) => ev.preventDefault());
     }
 }
 
@@ -2156,7 +2221,7 @@ function closeEditModal() {
     }
     editModal.classList.remove('active');
     unlockPageScroll();
-    resetDeleteState();
+    cancelDeleteHold();
     editingGameIndex = null;
     editingDraft = null;
 }
@@ -2575,41 +2640,6 @@ modalContent.addEventListener('click', function (e) {
 
     if (target.closest('#modalCancelBtn')) {
         closeEditModal();
-        return;
-    }
-
-    const deleteBtn = target.closest('#modalDeleteBtn');
-    if (deleteBtn) {
-        if (isDeleting) {
-            isNewGameModal = false;
-            games.splice(editingGameIndex, 1);
-            saveGames();
-            renderGames();
-            closeEditModal();
-            showToast('Игра удалена', 'success');
-            return;
-        }
-
-        isDeleting = true;
-        let sec = 5;
-        deleteBtn.disabled = true;
-        deleteBtn.style.opacity = '0.6';
-        deleteBtn.style.cursor = 'not-allowed';
-        deleteBtn.textContent = `Ждите (${sec})`;
-
-        deleteTimer = setInterval(() => {
-            sec--;
-            if (sec > 0) {
-                deleteBtn.textContent = `Ждите (${sec})`;
-            } else {
-                clearInterval(deleteTimer);
-                deleteTimer = null;
-                deleteBtn.textContent = 'Удалить окончательно';
-                deleteBtn.disabled = false;
-                deleteBtn.style.opacity = '1';
-                deleteBtn.style.cursor = 'pointer';
-            }
-        }, 1000);
         return;
     }
 

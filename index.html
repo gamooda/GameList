@@ -1325,6 +1325,7 @@ let deleteTimer = null;
 let isDeleting = false;
 let loaderTimer = null;
 let isNewGameModal = false;
+let shareGenToken = 0;
 
 let isDragging = false;
 let hasDragged = false;
@@ -1394,6 +1395,163 @@ function sanitizeUserFields(g) {
     return { userRating, userPlaytime, tags, notes };
 }
 
+function writeVarint(out, value) {
+    let v = Math.max(0, Math.floor(Number(value) || 0));
+    while (v >= 128) {
+        out.push((v % 128) | 0x80);
+        v = Math.floor(v / 128);
+    }
+    out.push(v);
+}
+
+function writePackedString(out, encoder, str) {
+    const bytes = encoder.encode(str);
+    writeVarint(out, bytes.length);
+    for (let i = 0; i < bytes.length; i++) out.push(bytes[i]);
+}
+
+function packGamesV2(list) {
+    const out = [];
+    const encoder = new TextEncoder();
+    out.push(2);
+    writeVarint(out, list.length);
+    for (const g of list) {
+        const idNum = Number(g.id);
+        if (Number.isSafeInteger(idNum) && idNum > 0) {
+            writeVarint(out, idNum);
+        } else {
+            writeVarint(out, 0);
+            writePackedString(out, encoder, String(g.id));
+        }
+        out.push(g.userRating || 0);
+        writeVarint(out, Math.round((g.userPlaytime || 0) * 60));
+        const tags = g.tags || [];
+        let mask = 0;
+        PRESET_TAGS.forEach((tag, i) => {
+            if (tags.includes(tag)) mask |= (1 << i);
+        });
+        out.push(mask & 0xff, (mask >> 8) & 0xff);
+        const custom = tags.filter(t => !PRESET_TAGS.includes(t));
+        writeVarint(out, custom.length);
+        for (const t of custom) writePackedString(out, encoder, t);
+        writePackedString(out, encoder, g.notes || '');
+    }
+    return new Uint8Array(out);
+}
+
+function createReader(bytes) {
+    let pos = 0;
+    return {
+        byte() {
+            if (pos >= bytes.length) throw new Error('Unexpected end of data');
+            return bytes[pos++];
+        },
+        varint() {
+            let result = 0;
+            let shift = 0;
+            while (true) {
+                const b = this.byte();
+                result += (b & 0x7f) * Math.pow(2, shift);
+                if (!(b & 0x80)) break;
+                shift += 7;
+                if (shift > 49) throw new Error('Varint too long');
+            }
+            return result;
+        },
+        bytes(n) {
+            if (pos + n > bytes.length) throw new Error('Unexpected end of data');
+            const slice = bytes.subarray(pos, pos + n);
+            pos += n;
+            return slice;
+        }
+    };
+}
+
+function readPackedString(reader, decoder, maxBytes) {
+    const len = reader.varint();
+    if (len > maxBytes) throw new Error('String too long');
+    return decoder.decode(reader.bytes(len));
+}
+
+function unpackGamesV2(bytes) {
+    const reader = createReader(bytes);
+    const decoder = new TextDecoder();
+    if (reader.byte() !== 2) throw new Error('Unsupported format');
+    const count = reader.varint();
+    if (count > 1000) throw new Error('Too many games');
+    const entries = [];
+    for (let k = 0; k < count; k++) {
+        let id = reader.varint();
+        if (id === 0) id = readPackedString(reader, decoder, 200);
+        const rating = reader.byte();
+        const minutes = reader.varint();
+        const mask = reader.byte() | (reader.byte() << 8);
+        const tags = [];
+        PRESET_TAGS.forEach((tag, i) => {
+            if (mask & (1 << i)) tags.push(tag);
+        });
+        const customCount = reader.varint();
+        if (customCount > 30) throw new Error('Too many tags');
+        for (let j = 0; j < customCount; j++) tags.push(readPackedString(reader, decoder, 200));
+        const notes = readPackedString(reader, decoder, 8000);
+        entries.push({
+            i: id,
+            r: rating <= 10 ? rating : 0,
+            p: minutes > 0 ? minutes / 60 : 0,
+            t: tags,
+            n: notes
+        });
+    }
+    return entries;
+}
+
+function bytesToBase64Url(bytes) {
+    let bin = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+        bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlToBytes(str) {
+    const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - (b64.length % 4));
+    const bin = atob(b64 + pad);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+}
+
+async function deflateRaw(bytes) {
+    const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function inflateRaw(bytes) {
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    const reader = stream.getReader();
+    const chunks = [];
+    let total = 0;
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.length;
+        if (total > 2000000) {
+            await reader.cancel();
+            throw new Error('Data too large');
+        }
+        chunks.push(value);
+    }
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for (const c of chunks) {
+        out.set(c, offset);
+        offset += c.length;
+    }
+    return out;
+}
+
 async function initDatabase() {
     showLoader();
     loadGames();
@@ -1408,7 +1566,7 @@ async function initDatabase() {
             if (g && g.id !== undefined && g.id !== null) dbById.set(String(g.id), g);
         }
         searchInput.placeholder = `Поиск среди ${GAME_DATABASE.length} игр...`;
-        loadFromHash();
+        await loadFromHash();
     } catch (error) {
         showToast('Ошибка загрузки базы. Открой через Live Server.', 'error');
         searchInput.placeholder = 'Ошибка загрузки базы данных';
@@ -1867,39 +2025,62 @@ function searchLocalGames(query) {
     setTimeout(checkScroll, 700);
 }
 
-function generateShareLink() {
-    if (games.length === 0 || typeof LZString === 'undefined') {
+async function generateShareLink() {
+    const token = ++shareGenToken;
+    if (games.length === 0) {
         shareLinkInput.value = '';
         return;
     }
-    const data = games.map(g => ({
-        i: g.id,
-        r: g.userRating || 0,
-        p: g.userPlaytime || 0,
-        t: g.tags && g.tags.length ? g.tags : undefined,
-        n: g.notes || undefined
-    }));
-    const json = JSON.stringify(data);
-    const compressed = LZString.compressToEncodedURIComponent(json);
     const baseUrl = window.location.origin + window.location.pathname;
-    shareLinkInput.value = `${baseUrl}#data=${compressed}`;
+    let url = '';
+    if (typeof CompressionStream !== 'undefined') {
+        try {
+            const packed = packGamesV2(games);
+            const deflated = await deflateRaw(packed);
+            url = `${baseUrl}#d=${bytesToBase64Url(deflated)}`;
+        } catch (e) {
+            url = '';
+        }
+    }
+    if (!url && typeof LZString !== 'undefined') {
+        const data = games.map(g => ({
+            i: g.id,
+            r: g.userRating || 0,
+            p: g.userPlaytime || 0,
+            t: g.tags && g.tags.length ? g.tags : undefined,
+            n: g.notes || undefined
+        }));
+        url = `${baseUrl}#data=${LZString.compressToEncodedURIComponent(JSON.stringify(data))}`;
+    }
+    if (token === shareGenToken) {
+        shareLinkInput.value = url;
+    }
 }
 
-function loadFromHash() {
+async function loadFromHash() {
     const hash = window.location.hash;
-    if (hash && hash.startsWith('#data=')) {
-        if (typeof LZString === 'undefined') {
+    const isV2 = hash.startsWith('#d=');
+    const isV1 = hash.startsWith('#data=');
+    if (isV2 || isV1) {
+        const payload = isV2 ? hash.slice(3) : hash.slice(6);
+        if (isV2 && typeof DecompressionStream === 'undefined') {
+            showToast('Обнови браузер, чтобы открыть эту ссылку', 'error');
+        } else if (isV1 && typeof LZString === 'undefined') {
             showToast('Библиотека сжатия не загрузилась', 'error');
         } else {
-            const compressed = hash.slice(6);
             try {
-                if (compressed.length > 200000) throw new Error('Payload too large');
-                const json = LZString.decompressFromEncodedURIComponent(compressed);
-                const data = json ? JSON.parse(json) : null;
-                if (Array.isArray(data) && data.length > 0) {
+                if (payload.length > 200000) throw new Error('Payload too large');
+                let entries = null;
+                if (isV2) {
+                    entries = unpackGamesV2(await inflateRaw(base64UrlToBytes(payload)));
+                } else {
+                    const json = LZString.decompressFromEncodedURIComponent(payload);
+                    entries = json ? JSON.parse(json) : null;
+                }
+                if (Array.isArray(entries) && entries.length > 0) {
                     const seen = new Set();
                     const imported = [];
-                    for (const g of data) {
+                    for (const g of entries) {
                         if (!g || typeof g !== 'object' || g.i === undefined || g.i === null) continue;
                         const key = String(g.i);
                         if (seen.has(key)) continue;
@@ -2476,11 +2657,11 @@ document.addEventListener('error', function(e) {
 }, true);
 
 copyShareBtn.addEventListener('click', async function () {
-    if (typeof LZString === 'undefined') {
+    if (typeof LZString === 'undefined' && typeof CompressionStream === 'undefined') {
         showToast('Библиотека сжатия не загрузилась', 'error');
         return;
     }
-    generateShareLink();
+    await generateShareLink();
     const link = shareLinkInput.value;
     if (!link) {
         showToast('Список пуст', 'error');

@@ -1022,16 +1022,22 @@ h1 {
     align-items: center;
     z-index: 10000;
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.4s ease, backdrop-filter 0.4s ease;
+    transition: opacity 0.4s ease, visibility 0.4s ease, backdrop-filter 0.4s ease;
     overflow: hidden;
     perspective: 1200px;
 }
 .lightbox.active {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
+    transition: opacity 0.4s ease, visibility 0s, backdrop-filter 0.4s ease;
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
+}
+.lightbox:not(.active) .lightbox-card {
+    pointer-events: none;
 }
 .lightbox-container {
     position: absolute;

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#09090b">
 <title>GameList</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2318181b'/><g transform='translate(4, 4)' fill='none' stroke='%238b5cf6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 11h4m-2-2v4m7-1h.01M18 10h.01'/><rect x='2' y='6' width='20' height='12' rx='6'/></g></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,6 +32,7 @@
     padding: 0;
     font-family: 'Manrope', system-ui, -apple-system, sans-serif;
     user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 input, textarea {
     user-select: text;
@@ -60,9 +62,13 @@ input[type=number] {
     --success: #10b981;
 }
 
+html {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: #333338 var(--bg);
+}
 html, body {
     overflow-x: hidden;
-    resize: none;
 }
 html.modal-open, body.modal-open {
     overflow: hidden !important;
@@ -84,7 +90,6 @@ body {
 .app {
     max-width: 1000px;
     width: 100%;
-    resize: none;
 }
 header {
     display: flex;
@@ -262,6 +267,7 @@ h1 {
     overflow-y: auto;
     overflow-x: hidden;
     position: relative;
+    overscroll-behavior: contain;
 }
 .suggestions-scroll.no-scroll {
     overflow-y: hidden !important;
@@ -480,10 +486,11 @@ h1 {
     filter: blur(30px) brightness(0.2);
     z-index: 0;
     pointer-events: none;
+    opacity: 0.85;
     transition: opacity 0.3s;
 }
 .game-card:hover .card-bg {
-    opacity: 1.2;
+    opacity: 1;
 }
 .card-content {
     position: relative;
@@ -498,6 +505,7 @@ h1 {
     height: 200px;
     border-radius: 8px;
     object-fit: cover;
+    background: #18181f;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     cursor: pointer;
     transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
@@ -514,6 +522,7 @@ h1 {
     color: var(--text);
     line-height: 1.2;
     margin-top: 4px;
+    overflow-wrap: anywhere;
 }
 .meta-row {
     display: flex;
@@ -528,11 +537,13 @@ h1 {
     display: flex;
     gap: 12px;
     align-items: center;
+    flex-wrap: wrap;
 }
 .meta-right {
     display: flex;
     gap: 8px;
     align-items: center;
+    flex-wrap: wrap;
 }
 .game-rating-badge {
     background: rgba(255,255,255,0.1);
@@ -581,6 +592,10 @@ h1 {
     border-radius: 4px;
     font-size: 10px;
     color: #b0b0c0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .notes-preview {
     font-size: 13px;
@@ -588,6 +603,11 @@ h1 {
     font-style: italic;
     line-height: 1.4;
     margin-top: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 .action-btn {
     background: transparent;
@@ -665,7 +685,7 @@ h1 {
     transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     max-height: 90vh;
     overflow-y: auto;
-    resize: none;
+    overscroll-behavior: contain;
 }
 .modal.active .modal-content {
     transform: translateY(0) scale(1);
@@ -686,12 +706,16 @@ h1 {
     height: 110px;
     border-radius: 8px;
     object-fit: cover;
+    background: #18181f;
+    flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 .edit-header h2 {
     font-size: 22px;
     font-weight: 800;
     line-height: 1.2;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 .edit-row {
     display: flex;
@@ -851,6 +875,7 @@ h1 {
     display: flex;
     gap: 12px;
     margin-top: 8px;
+    flex-wrap: wrap;
 }
 .empty-state {
     text-align: center;
@@ -1057,6 +1082,7 @@ h1 {
     pointer-events: auto;
     will-change: transform, top, left, width, height;
     cursor: grab;
+    touch-action: none;
 }
 .lightbox-card:active {
     cursor: grabbing;
@@ -1072,6 +1098,7 @@ h1 {
     will-change: object-fit, border-radius;
     transition: box-shadow 0.3s ease, border 0.3s ease;
     border: 1px solid transparent;
+    -webkit-user-drag: none;
 }
 .lightbox-card:hover .lightbox-face {
     box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 30px rgba(124, 58, 237, 0.4);
@@ -1143,6 +1170,13 @@ h1 {
     to { transform: rotate(360deg); }
 }
 
+@media (hover: none) {
+    .edit-btn {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
 @media (max-width: 640px) {
     .game-list {
         grid-template-columns: 1fr;
@@ -1180,6 +1214,9 @@ h1 {
         width: 100%;
         justify-content: center;
     }
+    .modal-content {
+        padding: 18px;
+    }
 }
 </style>
 </head>
@@ -1192,7 +1229,7 @@ h1 {
         </h1>
         <div class="share-bar">
             <input type="text" id="shareLinkInput" placeholder="Поделиться списком" readonly tabindex="-1">
-            <button class="btn btn-primary" id="copyShareBtn">Копировать</button>
+            <button class="btn btn-primary" id="copyShareBtn" type="button">Копировать</button>
         </div>
     </header>
 
@@ -1200,12 +1237,12 @@ h1 {
         <div class="search-icon-wrapper">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </div>
-        <input type="text" class="search-input" id="searchInput" placeholder="Поиск игр..." autocomplete="off">
+        <input type="text" class="search-input" id="searchInput" placeholder="Поиск игр..." autocomplete="off" aria-label="Поиск игр">
         
         <div class="suggestions-wrapper" id="suggestionsWrapper">
             <div class="suggestions-scroll" id="suggestionsScroll"></div>
             <div class="fade-overlay hidden" id="fadeOverlay"></div>
-            <button class="scroll-top-btn" id="scrollTopBtn" aria-label="Наверх">
+            <button class="scroll-top-btn" id="scrollTopBtn" type="button" aria-label="Наверх">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
             </button>
         </div>
@@ -1215,7 +1252,7 @@ h1 {
     <div class="empty-state" id="emptyState">Пока нет пройденных игр. Найдите игру через поиск выше.</div>
 </div>
 
-<button class="backtop" id="scrollToTopBtn" aria-label="Наверх" title="Наверх">
+<button class="backtop" id="scrollToTopBtn" type="button" aria-label="Наверх" title="Наверх">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="18 15 12 9 6 15"></polyline>
     </svg>
@@ -1223,11 +1260,11 @@ h1 {
 
 <div class="modal" id="editModal">
     <div class="modal-bg" id="modalBg"></div>
-    <div class="modal-content" id="modalContent"></div>
+    <div class="modal-content" id="modalContent" role="dialog" aria-modal="true" aria-label="Редактирование игры"></div>
 </div>
 
-<div class="lightbox" id="lightbox">
-    <div class="esc-btn" id="closeLightbox">ESC</div>
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Просмотр обложки">
+    <button class="esc-btn" id="closeLightbox" type="button">ESC</button>
     <div class="lightbox-container">
         <div class="lightbox-card" id="lightboxCard">
             <img class="lightbox-face front" id="lightboxImgFront" src="" alt="Preview" draggable="false">
@@ -1244,6 +1281,7 @@ h1 {
 
 <script>
 let GAME_DATABASE = [];
+let dbById = new Map();
 const PRESET_TAGS = [
     "Хороший геймплей", "Сюжет", "Атмосфера", "Сложная", "Стелс", 
     "Открытый мир", "Музыка", "Визуал", "Оптимизация", "Расслабляющая", 
@@ -1252,15 +1290,12 @@ const PRESET_TAGS = [
 
 const RATING_COLORS = ['', '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#059669', '#047857', '#065f46'];
 
-function getPlaytimeColor(hours) {
-    if (hours <= 15) return '#34d399';
-    if (hours <= 35) return '#a3e635';
-    if (hours <= 60) return '#facc15';
-    if (hours <= 100) return '#fb923c';
-    return '#f87171';
-}
+const FALLBACK_COVER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect width="400" height="200" fill="#18181f"/><g fill="none" stroke="#3f3f46" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(152,52) scale(4)"><path d="M6 11h4m-2-2v4m7-1h.01M18 10h.01"/><rect x="2" y="6" width="20" height="12" rx="6"/></g></svg>');
 
 const STORAGE_KEY = 'game_tracker_games_v19';
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
 const searchInput = document.getElementById('searchInput');
 const suggestionsWrapper = document.getElementById('suggestionsWrapper');
 const suggestionsScroll = document.getElementById('suggestionsScroll');
@@ -1285,6 +1320,7 @@ const closeLightbox = document.getElementById('closeLightbox');
 let games = [];
 let debounceTimer = null;
 let editingGameIndex = null;
+let editingDraft = null;
 let deleteTimer = null;
 let isDeleting = false;
 let loaderTimer = null;
@@ -1295,34 +1331,90 @@ let hasDragged = false;
 let previousMousePosition = { x: 0, y: 0 };
 let currentRotation = { x: 0, y: 0 };
 let isSpinning = false;
-let spinAnimationId;
+let spinAnimationId = null;
 let lastTime = performance.now();
 let scrollY = 0;
 let activeTargetElement = null;
 let isTransitioning = false;
+let openFallTimer = null;
+let closeFallTimer = null;
+let imgLoadTimer = null;
 
-function formatTime(h, m) {
-    if (!h && !m) return '';
-    let parts = [];
+function getPlaytimeColor(hours) {
+    const h = Number(hours) || 0;
+    if (h <= 15) return '#34d399';
+    if (h <= 35) return '#a3e635';
+    if (h <= 60) return '#facc15';
+    if (h <= 100) return '#fb923c';
+    return '#f87171';
+}
+
+function formatTime(totalHours) {
+    const totalMinutes = Math.round((Number(totalHours) || 0) * 60);
+    if (totalMinutes <= 0) return '';
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    const parts = [];
     if (h > 0) parts.push(`${h}ч`);
     if (m > 0) parts.push(`${m}м`);
     return parts.join(' ');
 }
 
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function safeImageUrl(url) {
+    if (typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (/\s/.test(trimmed)) return '';
+    if (/^https?:\/\//i.test(trimmed) || /^data:image\//i.test(trimmed)) return trimmed;
+    return '';
+}
+
+function cssUrl(url) {
+    return url.replace(/\\/g, '%5C').replace(/'/g, '%27').replace(/"/g, '%22');
+}
+
+function sanitizeUserFields(g) {
+    const r = Number(g.userRating);
+    const userRating = Number.isFinite(r) && r > 0 ? Math.min(10, Math.max(1, Math.round(r))) : null;
+    const p = Number(g.userPlaytime);
+    const userPlaytime = Number.isFinite(p) && p > 0 ? Math.min(p, 100000) : null;
+    const tags = Array.isArray(g.tags)
+        ? [...new Set(g.tags.filter(t => typeof t === 'string' && t.trim()).map(t => t.trim().replace(/\s+/g, ' ').slice(0, 20)))].slice(0, 30)
+        : [];
+    const notes = typeof g.notes === 'string' ? g.notes.slice(0, 2000) : '';
+    return { userRating, userPlaytime, tags, notes };
+}
+
 async function initDatabase() {
     showLoader();
+    loadGames();
     try {
         const response = await fetch('hltb_games.json');
         if (!response.ok) throw new Error('Network response was not ok');
-        GAME_DATABASE = await response.json();
+        const data = await response.json();
+        if (!Array.isArray(data)) throw new Error('Invalid database format');
+        GAME_DATABASE = data;
+        dbById = new Map();
+        for (const g of GAME_DATABASE) {
+            if (g && g.id !== undefined && g.id !== null) dbById.set(String(g.id), g);
+        }
         searchInput.placeholder = `Поиск среди ${GAME_DATABASE.length} игр...`;
-        loadGames();
         loadFromHash();
-        generateShareLink();
     } catch (error) {
         showToast('Ошибка загрузки базы. Открой через Live Server.', 'error');
         searchInput.placeholder = 'Ошибка загрузки базы данных';
         searchInput.disabled = true;
+        renderGames();
+        generateShareLink();
         hideLoader();
     }
 }
@@ -1330,19 +1422,35 @@ async function initDatabase() {
 function loadGames() {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            games = JSON.parse(saved);
-        }
+        const parsed = saved ? JSON.parse(saved) : [];
+        games = Array.isArray(parsed) ? parsed.filter(g => g && typeof g === 'object' && g.id !== undefined && g.id !== null && typeof g.name === 'string').map(g => ({
+            id: g.id,
+            name: g.name,
+            background_image: typeof g.background_image === 'string' ? g.background_image : null,
+            rating: Number.isFinite(Number(g.rating)) ? Number(g.rating) : 0,
+            playtime: Number.isFinite(Number(g.playtime)) ? Number(g.playtime) : 0,
+            released: typeof g.released === 'string' ? g.released : '',
+            ...sanitizeUserFields(g)
+        })) : [];
     } catch (e) {
         games = [];
     }
 }
 
 function saveGames() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+    } catch (e) {
+        showToast('Не удалось сохранить: хранилище переполнено', 'error');
+    }
+    generateShareLink();
 }
 
 function showToast(message, type = 'info') {
+    while (toastContainer.children.length >= 4) {
+        toastContainer.firstElementChild.remove();
+    }
+
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
 
@@ -1404,16 +1512,9 @@ function hideLoader() {
     loadingOverlay.classList.remove('active');
 }
 
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 function checkScroll() {
     if (!suggestionsWrapper.classList.contains('active')) return;
-    
+
     const { scrollTop, scrollHeight, clientHeight } = suggestionsScroll;
     const maxScroll = scrollHeight - clientHeight;
 
@@ -1447,11 +1548,13 @@ function renderGames() {
     emptyState.style.display = 'none';
 
     gameList.innerHTML = games.map((game, index) => {
-        const bgImg = game.background_image ? `url('${game.background_image}')` : 'none';
+        const rawBg = safeImageUrl(game.background_image);
+        const bgImg = rawBg ? `url('${cssUrl(rawBg)}')` : 'none';
+        const coverSrc = rawBg || FALLBACK_COVER;
 
         const tagsHtml = (game.tags || []).map(tag => `<span class="game-tag-view">${escapeHtml(tag)}</span>`).join('');
-        
-        const roundedRating = Math.round(game.userRating) || 0;
+
+        const roundedRating = Math.max(0, Math.min(10, Math.round(game.userRating) || 0));
         const ratingColor = RATING_COLORS[roundedRating] || 'currentColor';
         const userRatingHtml = game.userRating ? `
             <div class="user-rating-badge" style="background: ${ratingColor}">
@@ -1459,13 +1562,7 @@ function renderGames() {
                 ${game.userRating} / 10
             </div>` : '';
 
-        let timeStr = '';
-        if (game.userPlaytime) {
-            const h = Math.floor(game.userPlaytime);
-            const m = Math.round((game.userPlaytime - h) * 60);
-            timeStr = formatTime(h, m);
-        }
-        
+        const timeStr = formatTime(game.userPlaytime);
         const userTimeHtml = timeStr ? `
             <span class="user-time-badge" style="color: ${getPlaytimeColor(game.userPlaytime)}; background: rgba(0,0,0,0.2);">
                 <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3L19 3"/><path d="M12 3v2"/></svg>
@@ -1474,33 +1571,36 @@ function renderGames() {
 
         const notesPreview = game.notes ? `<div class="notes-preview">"${escapeHtml(game.notes)}"</div>` : '';
         const delay = Math.min(index * 0.04, 0.8);
+        const hltbText = game.playtime ? `${escapeHtml(String(game.playtime))} ч` : '—';
+        const yearText = game.released ? escapeHtml(String(game.released).slice(0, 4)) : '—';
+        const ratingText = game.rating ? escapeHtml(String(game.rating)) : '—';
 
         return `
             <div class="game-card" data-game-index="${index}" style="animation-delay: ${delay}s">
                 <div class="card-bg" style="background-image: ${bgImg}"></div>
                 <div class="card-content">
-                    <img class="game-cover" src="${game.background_image || 'https://via.placeholder.com/400x200/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
+                    <img class="game-cover" src="${escapeHtml(coverSrc)}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
                     <div class="game-title">${escapeHtml(game.name)}</div>
                     
                     <div class="meta-row">
                         <div class="meta-left">
                             <span class="badge">
                                 <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                HLTB: ${game.playtime ? game.playtime + ' ч' : '—'}
+                                HLTB: ${hltbText}
                             </span>
                             ${userTimeHtml}
                             <span class="badge">
                                 <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                ${game.released ? game.released.slice(0, 4) : '—'}
+                                ${yearText}
                             </span>
                         </div>
                         <div class="meta-right">
                             ${userRatingHtml}
                             <div class="game-rating-badge">
                                 <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                Народная: ${game.rating || '—'}
+                                Народная: ${ratingText}
                             </div>
-                            <button class="action-btn edit-btn" data-index="${index}">Изменить</button>
+                            <button class="action-btn edit-btn" type="button" data-index="${index}">Изменить</button>
                         </div>
                     </div>
                     
@@ -1513,15 +1613,15 @@ function renderGames() {
 }
 
 function renderEditModal() {
-    if (editingGameIndex === null) return;
-    const game = games[editingGameIndex];
+    if (editingGameIndex === null || !editingDraft) return;
+    const game = editingDraft;
 
     const allTags = [...new Set([...PRESET_TAGS, ...(game.tags || [])])];
 
     const ratingButtons = Array.from({length: 10}, (_, i) => {
         const val = i + 1;
         const isActive = game.userRating === val;
-        return `<button class="rating-btn ${isActive ? 'active' : ''}" style="background: ${RATING_COLORS[val]}" data-val="${val}">${val}</button>`;
+        return `<button class="rating-btn ${isActive ? 'active' : ''}" type="button" style="background: ${RATING_COLORS[val]}" data-val="${val}">${val}</button>`;
     }).join('');
 
     const tagChips = allTags.map(tag => {
@@ -1529,14 +1629,15 @@ function renderEditModal() {
         return `<div class="tag-chip ${isSelected ? 'selected' : ''}" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</div>`;
     }).join('');
 
-    const totalPlaytime = game.userPlaytime || 0;
-    const hoursVal = Math.floor(totalPlaytime);
-    const minsVal = Math.round((totalPlaytime - hoursVal) * 60);
+    const totalMinutes = Math.round((game.userPlaytime || 0) * 60);
+    const hoursVal = Math.floor(totalMinutes / 60);
+    const minsVal = totalMinutes % 60;
+    const headerSrc = safeImageUrl(game.background_image) || FALLBACK_COVER;
 
     modalContent.innerHTML = `
         <div class="edit-container">
             <div class="edit-header">
-                <img src="${game.background_image || 'https://via.placeholder.com/80x110/18181f/9a9aad?text=No+Cover'}" alt="${escapeHtml(game.name)}">
+                <img src="${escapeHtml(headerSrc)}" alt="${escapeHtml(game.name)}">
                 <h2>${escapeHtml(game.name)}</h2>
             </div>
             
@@ -1548,9 +1649,9 @@ function renderEditModal() {
                 <div class="edit-section">
                     <div class="edit-label">Время (ч / мин):</div>
                     <div style="display:flex; gap:4px; align-items:center;">
-                        <input type="number" step="1" min="0" id="modalHoursInput" class="user-playtime-input" value="${hoursVal}" placeholder="0">
+                        <input type="number" step="1" min="0" max="9999" inputmode="numeric" id="modalHoursInput" class="user-playtime-input" value="${hoursVal}" placeholder="0">
                         <span style="color:var(--text-muted); font-size:12px;">ч</span>
-                        <input type="number" step="1" min="0" max="59" id="modalMinsInput" class="user-playtime-input" value="${minsVal}" placeholder="0">
+                        <input type="number" step="1" min="0" max="59" inputmode="numeric" id="modalMinsInput" class="user-playtime-input" value="${minsVal}" placeholder="0">
                         <span style="color:var(--text-muted); font-size:12px;">м</span>
                     </div>
                 </div>
@@ -1561,18 +1662,18 @@ function renderEditModal() {
                 <div class="tags-picker" id="modalTagsPicker">${tagChips}</div>
                 <div class="custom-tag-row">
                     <input type="text" id="customTagInput" placeholder="Свой тег..." maxlength="20">
-                    <button id="addCustomTagBtn" type="button">
+                    <button id="addCustomTagBtn" type="button" aria-label="Добавить тег">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     </button>
                 </div>
             </div>
             
-            <textarea class="game-notes" id="modalNotesInput" rows="3" placeholder="Что понравилось, краткое описание...">${escapeHtml(game.notes || '')}</textarea>
+            <textarea class="game-notes" id="modalNotesInput" rows="3" maxlength="2000" placeholder="Что понравилось, краткое описание...">${escapeHtml(game.notes || '')}</textarea>
             
             <div class="edit-actions">
-                <button class="action-btn btn-success" id="modalSaveBtn">Сохранить</button>
-                <button class="action-btn cancel" id="modalCancelBtn">Отмена</button>
-                <button class="action-btn delete" id="modalDeleteBtn">Удалить</button>
+                <button class="action-btn btn-success" type="button" id="modalSaveBtn">Сохранить</button>
+                <button class="action-btn cancel" type="button" id="modalCancelBtn">Отмена</button>
+                <button class="action-btn delete" type="button" id="modalDeleteBtn">Удалить</button>
             </div>
         </div>
     `;
@@ -1581,7 +1682,10 @@ function renderEditModal() {
 }
 
 function resetDeleteState() {
-    if (deleteTimer) clearInterval(deleteTimer);
+    if (deleteTimer) {
+        clearInterval(deleteTimer);
+        deleteTimer = null;
+    }
     isDeleting = false;
     const btn = document.getElementById('modalDeleteBtn');
     if (btn) {
@@ -1593,7 +1697,9 @@ function resetDeleteState() {
 }
 
 function openEditModal(index) {
+    if (!games[index]) return;
     editingGameIndex = index;
+    editingDraft = JSON.parse(JSON.stringify(games[index]));
     renderEditModal();
     editModal.classList.add('active');
     document.documentElement.classList.add('modal-open');
@@ -1611,10 +1717,11 @@ function closeEditModal() {
     document.body.classList.remove('modal-open');
     resetDeleteState();
     editingGameIndex = null;
+    editingDraft = null;
 }
 
 function addGameFromSearch(gameData) {
-    const exists = games.some(g => g.id === gameData.id);
+    const exists = games.some(g => String(g.id) === String(gameData.id));
     if (exists) {
         showToast('Эта игра уже добавлена', 'error');
         return;
@@ -1631,13 +1738,50 @@ function addGameFromSearch(gameData) {
         tags: [],
         notes: ''
     });
-    
+
     isNewGameModal = true;
     searchInput.value = '';
     suggestionsWrapper.classList.remove('active');
     suggestionsScroll.innerHTML = '';
-    
+
     openEditModal(0);
+}
+
+function appendTagChip(tag) {
+    const picker = document.getElementById('modalTagsPicker');
+    if (!picker) return;
+    const chip = document.createElement('div');
+    chip.className = 'tag-chip selected';
+    chip.dataset.tag = tag;
+    chip.textContent = tag;
+    picker.appendChild(chip);
+}
+
+function addCustomTag() {
+    if (editingGameIndex === null || !editingDraft) return;
+    const input = document.getElementById('customTagInput');
+    if (!input) return;
+    const tag = input.value.trim().replace(/\s+/g, ' ').slice(0, 20);
+    if (!tag) return;
+    const game = editingDraft;
+    if (!game.tags) game.tags = [];
+    const lower = tag.toLowerCase();
+    if (game.tags.some(t => t.toLowerCase() === lower)) {
+        showToast('Такой тег уже есть', 'error');
+        input.value = '';
+        return;
+    }
+    const picker = document.getElementById('modalTagsPicker');
+    const presetChip = picker ? Array.from(picker.children).find(ch => ch.dataset.tag && ch.dataset.tag.toLowerCase() === lower) : null;
+    if (presetChip) {
+        game.tags.push(presetChip.dataset.tag);
+        presetChip.classList.add('selected');
+    } else {
+        game.tags.push(tag);
+        appendTagChip(tag);
+    }
+    input.value = '';
+    input.focus();
 }
 
 function searchLocalGames(query) {
@@ -1680,21 +1824,19 @@ function searchLocalGames(query) {
     }
 
     suggestionsScroll.innerHTML = filtered.map((game, index) => {
-        const roundedRating = Math.round(game.rating) || 0;
+        const ratingNum = Number(game.rating);
+        const roundedRating = Number.isFinite(ratingNum) ? Math.max(0, Math.min(10, Math.round(ratingNum))) : 0;
         const ratingColor = RATING_COLORS[roundedRating] || 'currentColor';
-        const timeColor = getPlaytimeColor(game.playtime || 0);
+        const timeColor = getPlaytimeColor(game.playtime);
+        const imgSrc = safeImageUrl(game.background_image) || FALLBACK_COVER;
+        const ratingText = game.rating ? escapeHtml(String(game.rating)) : '—';
+        const timeText = game.playtime ? `${escapeHtml(String(game.playtime))} ч` : '—';
+        const yearText = game.released ? escapeHtml(String(game.released).slice(0, 4)) : '—';
 
         return `
-        <div class="suggestion-item" data-game='${JSON.stringify({
-            id: game.id,
-            name: game.name,
-            background_image: game.background_image,
-            rating: game.rating,
-            playtime: game.playtime,
-            released: game.released
-        }).replace(/'/g, "&#39;")}' style="animation-delay: ${index * 0.04}s">
+        <div class="suggestion-item" data-game-id="${escapeHtml(String(game.id))}" style="animation-delay: ${index * 0.04}s">
             <div class="img-wrapper">
-                <img src="${game.background_image || 'https://via.placeholder.com/56x56/18181f/9a9aad?text=?'}" alt="${escapeHtml(game.name)}" onload="this.classList.add('loaded')">
+                <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(game.name)}">
                 <div class="spinner-small"></div>
             </div>
             <div class="suggestion-info">
@@ -1702,15 +1844,15 @@ function searchLocalGames(query) {
                 <div class="suggestion-meta">
                     <span>
                         <svg class="small-icon" style="color: ${ratingColor}" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                        <span style="color: ${ratingColor}">${game.rating || '—'}</span>
+                        <span style="color: ${ratingColor}">${ratingText}</span>
                     </span>
                     <span style="color: ${timeColor}">
                         <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        ${game.playtime ? game.playtime + ' ч' : '—'}
+                        ${timeText}
                     </span>
                     <span style="color: #a1a1aa">
                         <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        ${game.released ? game.released.slice(0, 4) : '—'}
+                        ${yearText}
                     </span>
                 </div>
             </div>
@@ -1720,13 +1862,13 @@ function searchLocalGames(query) {
 
     suggestionsScroll.scrollTop = 0;
     suggestionsWrapper.classList.add('active');
-    
+
     checkScroll();
     setTimeout(checkScroll, 700);
 }
 
 function generateShareLink() {
-    if (games.length === 0) {
+    if (games.length === 0 || typeof LZString === 'undefined') {
         shareLinkInput.value = '';
         return;
     }
@@ -1745,45 +1887,56 @@ function generateShareLink() {
 
 function loadFromHash() {
     const hash = window.location.hash;
-    if (!hash || !hash.startsWith('#data=')) {
-        renderGames();
-        return;
-    }
-
-    const compressed = hash.slice(6);
-    try {
-        const json = LZString.decompressFromEncodedURIComponent(compressed);
-        if (!json) {
-            renderGames();
-            return;
-        }
-        const data = JSON.parse(json);
-        if (Array.isArray(data) && data.length > 0) {
-            games = data.map(g => {
-                const dbGame = GAME_DATABASE.find(db => db.id === g.i);
-                return {
-                    id: g.i,
-                    name: dbGame ? dbGame.name : 'Unknown',
-                    background_image: dbGame ? dbGame.background_image : null,
-                    rating: dbGame ? dbGame.rating : 0,
-                    playtime: dbGame ? dbGame.playtime : 0,
-                    released: dbGame ? dbGame.released : '',
-                    userRating: g.r || null,
-                    userPlaytime: g.p || null,
-                    tags: g.t || [],
-                    notes: g.n || ''
-                };
-            });
-            saveGames();
-            renderGames();
-            showToast('Список загружен по ссылке', 'success');
+    if (hash && hash.startsWith('#data=')) {
+        if (typeof LZString === 'undefined') {
+            showToast('Библиотека сжатия не загрузилась', 'error');
         } else {
-            renderGames();
+            const compressed = hash.slice(6);
+            try {
+                if (compressed.length > 200000) throw new Error('Payload too large');
+                const json = LZString.decompressFromEncodedURIComponent(compressed);
+                const data = json ? JSON.parse(json) : null;
+                if (Array.isArray(data) && data.length > 0) {
+                    const seen = new Set();
+                    const imported = [];
+                    for (const g of data) {
+                        if (!g || typeof g !== 'object' || g.i === undefined || g.i === null) continue;
+                        const key = String(g.i);
+                        if (seen.has(key)) continue;
+                        seen.add(key);
+                        const dbGame = dbById.get(key);
+                        imported.push({
+                            id: dbGame ? dbGame.id : g.i,
+                            name: dbGame && typeof dbGame.name === 'string' ? dbGame.name : 'Unknown',
+                            background_image: dbGame ? dbGame.background_image : null,
+                            rating: dbGame ? dbGame.rating : 0,
+                            playtime: dbGame ? dbGame.playtime : 0,
+                            released: dbGame ? dbGame.released : '',
+                            ...sanitizeUserFields({ userRating: g.r, userPlaytime: g.p, tags: g.t, notes: g.n })
+                        });
+                        if (imported.length >= 1000) break;
+                    }
+                    if (imported.length > 0) {
+                        if (editModal.classList.contains('active')) closeEditModal();
+                        if (lightbox.classList.contains('active')) {
+                            lightbox.classList.remove('active');
+                            forceClose();
+                        }
+                        games = imported;
+                        saveGames();
+                        showToast('Список загружен по ссылке', 'success');
+                        try {
+                            history.replaceState(null, '', window.location.pathname + window.location.search);
+                        } catch (err) {}
+                    }
+                }
+            } catch (e) {
+                showToast('Не удалось прочитать ссылку', 'error');
+            }
         }
-    } catch (e) {
-        console.error(e);
-        renderGames();
     }
+    renderGames();
+    generateShareLink();
 }
 
 window.addEventListener('scroll', () => {
@@ -1792,13 +1945,14 @@ window.addEventListener('scroll', () => {
     } else {
         scrollToTopBtn.classList.remove('show');
     }
-});
+}, { passive: true });
 
 scrollToTopBtn.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
 gameList.addEventListener('mousemove', function(e) {
+    if (!canHover) return;
     const cover = e.target.closest('.game-cover');
     if (!cover) return;
 
@@ -1811,7 +1965,7 @@ gameList.addEventListener('mousemove', function(e) {
     const rotateX = ((y - centerY) / centerY) * -10;
     const rotateY = ((x - centerX) / centerX) * 10;
 
-    cover.style.transform = `scale(1.02) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    cover.style.transform = `perspective(600px) scale(1.02) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
 });
 
 gameList.addEventListener('mouseout', function(e) {
@@ -1827,7 +1981,11 @@ searchInput.addEventListener('input', function () {
     debounceTimer = setTimeout(() => searchLocalGames(query), 200);
 });
 
-suggestionsScroll.addEventListener('scroll', checkScroll);
+searchInput.addEventListener('focus', function () {
+    if (this.value.trim() && !this.disabled) searchLocalGames(this.value);
+});
+
+suggestionsScroll.addEventListener('scroll', checkScroll, { passive: true });
 
 scrollTopBtn.addEventListener('click', function(e) {
     e.stopPropagation();
@@ -1837,8 +1995,8 @@ scrollTopBtn.addEventListener('click', function(e) {
 suggestionsScroll.addEventListener('click', function (e) {
     const item = e.target.closest('.suggestion-item');
     if (!item) return;
-    const gameData = JSON.parse(item.dataset.game);
-    addGameFromSearch(gameData);
+    const dbGame = dbById.get(item.dataset.gameId);
+    if (dbGame) addGameFromSearch(dbGame);
 });
 
 document.addEventListener('click', function (e) {
@@ -1851,40 +2009,50 @@ gameList.addEventListener('click', function (e) {
     const target = e.target;
 
     if (target.classList.contains('game-cover')) {
-        if (isTransitioning) return;
-        const index = parseInt(target.dataset.index);
-        if (games[index] && games[index].background_image) {
+        if (isTransitioning || lightbox.classList.contains('active')) return;
+        const index = parseInt(target.dataset.index, 10);
+        if (games[index] && safeImageUrl(games[index].background_image)) {
             openLightbox(index, target);
         }
         return;
     }
 
-    if (target.classList.contains('edit-btn')) {
-        const index = parseInt(target.dataset.index);
+    const editBtn = target.closest('.edit-btn');
+    if (editBtn) {
+        const index = parseInt(editBtn.dataset.index, 10);
         isNewGameModal = false;
         openEditModal(index);
-        return;
     }
 });
 
 modalContent.addEventListener('click', function (e) {
-    if (editingGameIndex === null) return;
+    if (editingGameIndex === null || !editingDraft) return;
+    const game = editingDraft;
     const target = e.target;
-    const game = games[editingGameIndex];
 
-    if (target.id === 'modalSaveBtn') {
+    if (target.closest('#modalSaveBtn')) {
         const hInput = document.getElementById('modalHoursInput');
         const mInput = document.getElementById('modalMinsInput');
         const notesInput = document.getElementById('modalNotesInput');
 
-        let h = parseFloat(hInput.value) || 0;
-        let m = parseFloat(mInput.value) || 0;
-        if (h < 0) h = 0;
-        if (m < 0) m = 0;
+        let h = Math.floor(parseFloat(hInput.value));
+        let m = Math.round(parseFloat(mInput.value));
+        if (!Number.isFinite(h) || h < 0) h = 0;
+        if (h > 9999) h = 9999;
+        if (!Number.isFinite(m) || m < 0) m = 0;
         if (m > 59) m = 59;
 
-        game.userPlaytime = h + (m / 60);
-        game.notes = notesInput.value;
+        const totalMinutes = h * 60 + m;
+        game.userPlaytime = totalMinutes > 0 ? totalMinutes / 60 : null;
+        game.notes = notesInput.value.slice(0, 2000);
+
+        const targetGame = games[editingGameIndex];
+        if (targetGame) {
+            targetGame.userRating = game.userRating;
+            targetGame.userPlaytime = game.userPlaytime;
+            targetGame.tags = game.tags;
+            targetGame.notes = game.notes;
+        }
 
         if (isNewGameModal) {
             isNewGameModal = false;
@@ -1899,13 +2067,13 @@ modalContent.addEventListener('click', function (e) {
         return;
     }
 
-    if (target.id === 'modalCancelBtn') {
+    if (target.closest('#modalCancelBtn')) {
         closeEditModal();
         return;
     }
 
-    if (target.id === 'modalDeleteBtn') {
-        const btn = document.getElementById('modalDeleteBtn');
+    const deleteBtn = target.closest('#modalDeleteBtn');
+    if (deleteBtn) {
         if (isDeleting) {
             isNewGameModal = false;
             games.splice(editingGameIndex, 1);
@@ -1918,88 +2086,146 @@ modalContent.addEventListener('click', function (e) {
 
         isDeleting = true;
         let sec = 5;
-        btn.disabled = true;
-        btn.style.opacity = '0.6';
-        btn.style.cursor = 'not-allowed';
-        btn.textContent = `Ждите (${sec})`;
+        deleteBtn.disabled = true;
+        deleteBtn.style.opacity = '0.6';
+        deleteBtn.style.cursor = 'not-allowed';
+        deleteBtn.textContent = `Ждите (${sec})`;
 
         deleteTimer = setInterval(() => {
             sec--;
             if (sec > 0) {
-                btn.textContent = `Ждите (${sec})`;
+                deleteBtn.textContent = `Ждите (${sec})`;
             } else {
                 clearInterval(deleteTimer);
-                btn.textContent = 'Удалить окончательно';
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                btn.style.cursor = 'pointer';
+                deleteTimer = null;
+                deleteBtn.textContent = 'Удалить окончательно';
+                deleteBtn.disabled = false;
+                deleteBtn.style.opacity = '1';
+                deleteBtn.style.cursor = 'pointer';
             }
         }, 1000);
         return;
     }
 
-    if (target.id === 'addCustomTagBtn' || target.closest('#addCustomTagBtn')) {
-        const input = document.getElementById('customTagInput');
-        const tag = input.value.trim();
-        if (tag) {
-            if (!game.tags) game.tags = [];
-            if (!game.tags.includes(tag)) {
-                game.tags.push(tag);
-                renderEditModal();
-                setTimeout(() => {
-                    const newInput = document.getElementById('customTagInput');
-                    if (newInput) newInput.focus();
-                }, 10);
-            } else {
-                showToast('Такой тег уже есть', 'error');
-            }
-            input.value = '';
-        }
+    if (target.closest('#addCustomTagBtn')) {
+        addCustomTag();
         return;
     }
 
-    if (target.classList.contains('rating-btn')) {
-        const val = parseInt(target.dataset.val);
+    const ratingBtn = target.closest('.rating-btn');
+    if (ratingBtn) {
+        const val = parseInt(ratingBtn.dataset.val, 10);
         game.userRating = (game.userRating === val) ? null : val;
-
-        const buttons = document.querySelectorAll('#modalRatingPicker .rating-btn');
-        buttons.forEach(btn => {
-            if (parseInt(btn.dataset.val) === game.userRating) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+        document.querySelectorAll('#modalRatingPicker .rating-btn').forEach(btn => {
+            btn.classList.toggle('active', parseInt(btn.dataset.val, 10) === game.userRating);
         });
         return;
     }
 
-    if (target.classList.contains('tag-chip')) {
-        const tag = target.dataset.tag;
+    const tagChip = target.closest('.tag-chip');
+    if (tagChip) {
+        const tag = tagChip.dataset.tag;
         if (!game.tags) game.tags = [];
         if (game.tags.includes(tag)) {
             game.tags = game.tags.filter(t => t !== tag);
-            target.classList.remove('selected');
+            tagChip.classList.remove('selected');
         } else {
             game.tags.push(tag);
-            target.classList.add('selected');
+            tagChip.classList.add('selected');
         }
-        return;
     }
 });
 
 modalContent.addEventListener('keydown', function(e) {
     if (e.target.id === 'customTagInput' && e.key === 'Enter') {
         e.preventDefault();
-        document.getElementById('addCustomTagBtn').click();
+        addCustomTag();
     }
 });
 
 modalBg.addEventListener('click', closeEditModal);
 
+function clearLightboxTimers() {
+    if (openFallTimer) {
+        clearTimeout(openFallTimer);
+        openFallTimer = null;
+    }
+    if (closeFallTimer) {
+        clearTimeout(closeFallTimer);
+        closeFallTimer = null;
+    }
+    if (imgLoadTimer) {
+        clearTimeout(imgLoadTimer);
+        imgLoadTimer = null;
+    }
+}
+
+function computeLightboxFit(nw, nh) {
+    const w0 = nw || 800;
+    const h0 = nh || 450;
+    const maxW = window.innerWidth * 0.85;
+    const maxH = window.innerHeight * 0.85;
+    const ratio = Math.min(1, maxW / w0, maxH / h0);
+    const w = Math.max(1, Math.round(w0 * ratio));
+    const h = Math.max(1, Math.round(h0 * ratio));
+    return { w, h, top: (window.innerHeight - h) / 2, left: (window.innerWidth - w) / 2 };
+}
+
+function startSpinLoop() {
+    if (spinAnimationId !== null) return;
+    lastTime = performance.now();
+    spinAnimationId = requestAnimationFrame(spinLoop);
+}
+
+function stopSpinLoop() {
+    if (spinAnimationId !== null) {
+        cancelAnimationFrame(spinAnimationId);
+        spinAnimationId = null;
+    }
+}
+
+function spinLoop(time) {
+    spinAnimationId = null;
+    if (!lightbox.classList.contains('active') || isTransitioning) return;
+    const deltaTime = Math.min(Math.max(time - lastTime, 0), 50);
+    lastTime = time;
+
+    if (isSpinning && !isDragging) {
+        currentRotation.y = (currentRotation.y + deltaTime * 0.03) % 360;
+        const targetTiltX = Math.sin(currentRotation.y * Math.PI / 180) * 10;
+        currentRotation.x += (targetTiltX - currentRotation.x) * 0.05;
+        lightboxCard.style.transform = `translate(-50%, -50%) rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
+    }
+    spinAnimationId = requestAnimationFrame(spinLoop);
+}
+
+function finalizeOpen() {
+    if (!lightbox.classList.contains('active') || !isTransitioning) return;
+    if (openFallTimer) {
+        clearTimeout(openFallTimer);
+        openFallTimer = null;
+    }
+    isTransitioning = false;
+    lightboxCard.style.transition = 'none';
+    lightboxCard.style.top = '50%';
+    lightboxCard.style.left = '50%';
+    lightboxCard.style.transform = 'translate(-50%, -50%)';
+    isSpinning = !prefersReducedMotion;
+    startSpinLoop();
+}
+
 function openLightbox(index, targetElement) {
+    if (isTransitioning || lightbox.classList.contains('active')) return;
+    const imgUrl = safeImageUrl(games[index].background_image);
+    if (!imgUrl) return;
+
     isTransitioning = true;
     activeTargetElement = targetElement;
-    const imgUrl = games[index].background_image;
+    clearLightboxTimers();
+    stopSpinLoop();
+
+    delete lightboxImgFront.dataset.fallbackApplied;
+    delete lightboxImgBack.dataset.fallbackApplied;
     lightboxImgFront.src = imgUrl;
     lightboxImgBack.src = imgUrl;
 
@@ -2033,75 +2259,63 @@ function openLightbox(index, targetElement) {
 
     void lightboxCard.offsetWidth;
 
+    currentRotation = { x: 0, y: 0 };
+    hasDragged = false;
+    isDragging = false;
+    isSpinning = false;
+
     const tempImg = new Image();
     tempImg.onload = () => {
-        const maxW = window.innerWidth * 0.85;
-        const maxH = window.innerHeight * 0.85;
-        let finalW = tempImg.width;
-        let finalH = tempImg.height;
-
-        const ratio = Math.min(maxW / finalW, maxH / finalH);
-        if (ratio < 1) {
-            finalW *= ratio;
-            finalH *= ratio;
+        if (!lightbox.classList.contains('active') || !isTransitioning) return;
+        if (imgLoadTimer) {
+            clearTimeout(imgLoadTimer);
+            imgLoadTimer = null;
         }
-
-        const finalTop = (window.innerHeight - finalH) / 2;
-        const finalLeft = (window.innerWidth - finalW) / 2;
+        const fit = computeLightboxFit(tempImg.naturalWidth || tempImg.width, tempImg.naturalHeight || tempImg.height);
 
         lightboxCard.style.transition = 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
         lightboxImgFront.style.transition = 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
         lightboxImgBack.style.transition = 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
-        lightboxCard.style.top = `${finalTop}px`;
-        lightboxCard.style.left = `${finalLeft}px`;
-        lightboxCard.style.width = `${finalW}px`;
-        lightboxCard.style.height = `${finalH}px`;
+        lightboxCard.style.top = `${fit.top}px`;
+        lightboxCard.style.left = `${fit.left}px`;
+        lightboxCard.style.width = `${fit.w}px`;
+        lightboxCard.style.height = `${fit.h}px`;
 
         lightboxImgFront.style.objectFit = 'contain';
         lightboxImgFront.style.borderRadius = '12px';
+
+        openFallTimer = setTimeout(finalizeOpen, 550);
     };
-    tempImg.src = imgUrl;
-
-    currentRotation = { x: 0, y: 0 };
-    hasDragged = false;
-    isDragging = false;
-    isSpinning = false;
-}
-
-function onOpenTransitionEnd(e) {
-    if (e.target === lightboxCard && lightbox.classList.contains('active')) {
-        isTransitioning = false;
-        isSpinning = true;
-        lastTime = performance.now();
-        lightboxCard.style.transition = 'none';
-        lightboxCard.style.top = '50%';
-        lightboxCard.style.left = '50%';
-        lightboxCard.style.transform = 'translate(-50%, -50%)';
-    }
-}
-lightboxCard.addEventListener('transitionend', onOpenTransitionEnd);
-
-function spinLoop(time) {
-    if (lightbox.classList.contains('active') && !isTransitioning) {
-        const deltaTime = time - lastTime;
-        lastTime = time;
-
-        if (isSpinning && !isDragging) {
-            currentRotation.y += deltaTime * 0.03;
-            if (currentRotation.y > 360) currentRotation.y -= 360;
-
-            let targetTiltX = Math.sin(currentRotation.y * Math.PI / 180) * 10;
-            currentRotation.x += (targetTiltX - currentRotation.x) * 0.05;
-
-            lightboxCard.style.transform = `translate(-50%, -50%) rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
+    tempImg.onerror = () => {
+        if (!lightbox.classList.contains('active')) return;
+        lightbox.classList.remove('active');
+        forceClose();
+        showToast('Не удалось загрузить изображение', 'error');
+    };
+    imgLoadTimer = setTimeout(() => {
+        imgLoadTimer = null;
+        if (lightbox.classList.contains('active') && isTransitioning) {
+            lightbox.classList.remove('active');
+            forceClose();
+            showToast('Не удалось загрузить изображение', 'error');
         }
-    }
-    spinAnimationId = requestAnimationFrame(spinLoop);
+    }, 8000);
+    tempImg.src = imgUrl;
 }
 
-lightboxCard.addEventListener('mousedown', function(e) {
-    if (isTransitioning) return;
+lightboxCard.addEventListener('transitionend', function(e) {
+    if (e.target !== lightboxCard) return;
+    if (lightbox.classList.contains('active')) {
+        finalizeOpen();
+    } else if (isTransitioning) {
+        forceClose();
+    }
+});
+
+lightboxCard.addEventListener('pointerdown', function(e) {
+    if (isTransitioning || !lightbox.classList.contains('active')) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
     isDragging = true;
     isSpinning = false;
@@ -2109,55 +2323,67 @@ lightboxCard.addEventListener('mousedown', function(e) {
     previousMousePosition = { x: e.clientX, y: e.clientY };
 });
 
-window.addEventListener('mousemove', function(e) {
-    if (isDragging) {
-        const deltaMove = {
-            x: e.clientX - previousMousePosition.x,
-            y: e.clientY - previousMousePosition.y
-        };
+window.addEventListener('pointermove', function(e) {
+    if (!isDragging) return;
+    const deltaMove = {
+        x: e.clientX - previousMousePosition.x,
+        y: e.clientY - previousMousePosition.y
+    };
 
-        if (Math.abs(deltaMove.x) > 2 || Math.abs(deltaMove.y) > 2) {
-            hasDragged = true;
-        }
-
-        currentRotation.y += deltaMove.x * 0.5;
-        currentRotation.x -= deltaMove.y * 0.5;
-
-        lightboxCard.style.transform = `translate(-50%, -50%) rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
-
-        previousMousePosition = { x: e.clientX, y: e.clientY };
+    if (Math.abs(deltaMove.x) > 2 || Math.abs(deltaMove.y) > 2) {
+        hasDragged = true;
     }
+
+    currentRotation.y += deltaMove.x * 0.5;
+    currentRotation.x -= deltaMove.y * 0.5;
+
+    lightboxCard.style.transform = `translate(-50%, -50%) rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
+
+    previousMousePosition = { x: e.clientX, y: e.clientY };
 });
 
-window.addEventListener('mouseup', function() {
-    if (isDragging) {
-        isDragging = false;
-        isSpinning = true;
-        lastTime = performance.now();
+function endDrag() {
+    if (!isDragging) return;
+    isDragging = false;
+    if (lightbox.classList.contains('active') && !isTransitioning) {
+        isSpinning = !prefersReducedMotion;
+        startSpinLoop();
     }
+}
+
+window.addEventListener('pointerup', endDrag);
+window.addEventListener('pointercancel', endDrag);
+
+lightboxCard.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
 });
 
 function closeLightboxFn() {
     if (isTransitioning || !lightbox.classList.contains('active')) return;
     isTransitioning = true;
-
-    const startRect = lightboxCard.getBoundingClientRect();
-    const endRect = activeTargetElement.getBoundingClientRect();
-
     isSpinning = false;
     isDragging = false;
-    hasDragged = false;
+    stopSpinLoop();
 
-    if (activeTargetElement) {
-        activeTargetElement.style.opacity = '1';
+    if (!activeTargetElement || !activeTargetElement.isConnected) {
+        lightbox.classList.remove('active');
+        forceClose();
+        return;
     }
 
+    const endRect = activeTargetElement.getBoundingClientRect();
+    const startW = lightboxCard.offsetWidth;
+    const startH = lightboxCard.offsetHeight;
+
+    currentRotation.y = ((currentRotation.y % 360) + 540) % 360 - 180;
+    currentRotation.x = ((currentRotation.x % 360) + 540) % 360 - 180;
+
     lightboxCard.style.transition = 'none';
-    lightboxCard.style.transform = 'none';
-    lightboxCard.style.top = `${startRect.top}px`;
-    lightboxCard.style.left = `${startRect.left}px`;
-    lightboxCard.style.width = `${startRect.width}px`;
-    lightboxCard.style.height = `${startRect.height}px`;
+    lightboxCard.style.top = '50%';
+    lightboxCard.style.left = '50%';
+    lightboxCard.style.width = `${startW}px`;
+    lightboxCard.style.height = `${startH}px`;
+    lightboxCard.style.transform = `translate(-50%, -50%) rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
 
     lightboxImgFront.style.transition = 'none';
     lightboxImgFront.style.objectFit = 'contain';
@@ -2168,32 +2394,26 @@ function closeLightboxFn() {
     lightboxCard.style.transition = 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
     lightboxImgFront.style.transition = 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
-    lightboxCard.style.top = `${endRect.top}px`;
-    lightboxCard.style.left = `${endRect.left}px`;
+    lightboxCard.style.top = `${endRect.top + endRect.height / 2}px`;
+    lightboxCard.style.left = `${endRect.left + endRect.width / 2}px`;
     lightboxCard.style.width = `${endRect.width}px`;
     lightboxCard.style.height = `${endRect.height}px`;
+    lightboxCard.style.transform = 'translate(-50%, -50%) rotateX(0deg) rotateY(0deg)';
 
     lightboxImgFront.style.objectFit = 'cover';
     lightboxImgFront.style.borderRadius = '8px';
 
     lightbox.classList.remove('active');
+    closeFallTimer = setTimeout(forceClose, 600);
 }
-
-function onCloseTransitionEnd(e) {
-    if (e.target === lightboxCard && !lightbox.classList.contains('active')) {
-        forceClose();
-        isTransitioning = false;
-    }
-}
-lightboxCard.addEventListener('transitionend', onCloseTransitionEnd);
 
 function forceClose() {
+    clearLightboxTimers();
+    stopSpinLoop();
     document.documentElement.classList.remove('modal-open');
     document.body.classList.remove('modal-open');
     window.scrollTo(0, scrollY);
 
-    lightboxCard.style.transition = '';
-    lightboxCard.style.transform = '';
     lightboxCard.style.cssText = '';
     lightboxImgFront.style.cssText = '';
     lightboxImgBack.style.cssText = '';
@@ -2201,9 +2421,10 @@ function forceClose() {
     isSpinning = false;
     isDragging = false;
     hasDragged = false;
+    isTransitioning = false;
 
     if (activeTargetElement) {
-        activeTargetElement.style.opacity = '1';
+        activeTargetElement.style.opacity = '';
         activeTargetElement = null;
     }
 }
@@ -2211,11 +2432,13 @@ function forceClose() {
 closeLightbox.addEventListener('click', closeLightboxFn);
 
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+    if (e.key !== 'Escape') return;
+    if (lightbox.classList.contains('active')) {
         closeLightboxFn();
-    }
-    if (e.key === 'Escape' && editModal.classList.contains('active')) {
+    } else if (editModal.classList.contains('active')) {
         closeEditModal();
+    } else if (suggestionsWrapper.classList.contains('active')) {
+        suggestionsWrapper.classList.remove('active');
     }
 });
 
@@ -2226,20 +2449,61 @@ lightbox.addEventListener('click', function(e) {
     setTimeout(() => { hasDragged = false; }, 100);
 });
 
-copyShareBtn.addEventListener('click', function () {
+window.addEventListener('resize', function() {
+    if (!lightbox.classList.contains('active') || isTransitioning) return;
+    const fit = computeLightboxFit(lightboxImgFront.naturalWidth, lightboxImgFront.naturalHeight);
+    lightboxCard.style.width = `${fit.w}px`;
+    lightboxCard.style.height = `${fit.h}px`;
+});
+
+document.addEventListener('load', function(e) {
+    const el = e.target;
+    if (el instanceof HTMLImageElement && el.closest('.img-wrapper')) {
+        el.classList.add('loaded');
+    }
+}, true);
+
+document.addEventListener('error', function(e) {
+    const el = e.target;
+    if (!(el instanceof HTMLImageElement)) return;
+    if (el.dataset.fallbackApplied) {
+        el.classList.add('loaded');
+        return;
+    }
+    el.dataset.fallbackApplied = '1';
+    el.src = FALLBACK_COVER;
+    el.classList.add('loaded');
+}, true);
+
+copyShareBtn.addEventListener('click', async function () {
+    if (typeof LZString === 'undefined') {
+        showToast('Библиотека сжатия не загрузилась', 'error');
+        return;
+    }
     generateShareLink();
-    if (!shareLinkInput.value) {
+    const link = shareLinkInput.value;
+    if (!link) {
         showToast('Список пуст', 'error');
         return;
     }
-    shareLinkInput.select();
-    document.execCommand('copy');
-    showToast('Ссылка скопирована!', 'success');
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(link);
+            showToast('Ссылка скопирована!', 'success');
+            return;
+        }
+    } catch (e) {}
+    try {
+        shareLinkInput.select();
+        if (document.execCommand('copy')) {
+            showToast('Ссылка скопирована!', 'success');
+            return;
+        }
+    } catch (e) {}
+    showToast('Не удалось скопировать ссылку', 'error');
 });
 
 window.addEventListener('hashchange', loadFromHash);
-
-spinAnimationId = requestAnimationFrame(spinLoop);
 
 initDatabase();
 </script>

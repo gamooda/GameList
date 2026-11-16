@@ -636,47 +636,114 @@ h1 {
 
 .toast-container {
     position: fixed;
-    bottom: 20px;
-    left: 20px;
-    z-index: 30000;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    align-items: center;
+    z-index: 30000;
     pointer-events: none;
-    max-width: 280px;
+}
+@property --angle {
+    syntax: '<angle>';
+    initial-value: 360deg;
+    inherits: false;
 }
 .toast {
-    background: rgba(24, 24, 30, 0.92);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-left: 3px solid var(--primary);
-    border-radius: 6px;
-    padding: 7px 12px;
-    color: var(--text);
-    font-weight: 500;
-    font-size: 12px;
-    line-height: 1.35;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.55);
+    background: rgba(30, 30, 40, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 10px;
+    color: #f4f4f5;
+    padding: 11px 17px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: flex-start;
+    width: max-content;
+    min-width: 260px;
+    max-width: 90vw;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 10px 30px rgba(0,0,0,0.5);
+    transform: translateY(-20px);
     opacity: 0;
-    transform: translateX(-16px);
-    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+    max-height: 100px;
+    margin-bottom: 10px;
+    transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                opacity 0.35s ease, 
+                max-height 0.35s ease, 
+                margin-bottom 0.35s ease, 
+                padding 0.35s ease;
     pointer-events: auto;
 }
 .toast.show {
+    transform: translateY(0);
     opacity: 1;
-    transform: translateX(0);
 }
-.toast.success { border-left-color: var(--success); }
-.toast.error { border-left-color: var(--danger); }
-.toast.info { border-left-color: var(--primary); }
+.toast.hide {
+    max-height: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+}
+.toast-progress {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: conic-gradient(
+        from -90deg,
+        var(--progress-color) 0deg,
+        var(--progress-color) var(--angle),
+        rgba(255, 255, 255, 0.15) var(--angle),
+        rgba(255, 255, 255, 0.15) 360deg
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    --angle: 360deg;
+    animation: progressCountdown 3s linear 0.35s forwards;
+}
+.toast.success { --progress-color: #10b981; }
+.toast.error { --progress-color: #ef4444; }
+.toast.info { --progress-color: #8b5cf6; }
+@keyframes progressCountdown {
+    from { --angle: 360deg; }
+    to { --angle: 0deg; }
+}
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
 .toast-icon {
-    font-size: 13px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     flex-shrink: 0;
-    line-height: 1;
+}
+.toast-icon svg {
+    width: 16px;
+    height: 16px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+.toast.success .toast-icon { color: #10b981; }
+.toast.error .toast-icon { color: #ef4444; }
+.toast.info .toast-icon { color: #8b5cf6; }
+.toast-message {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.3;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
 .backtop {
@@ -873,9 +940,12 @@ h1 {
         height: 18px;
     }
     .toast-container {
-        bottom: 16px;
-        left: 16px;
-        max-width: calc(100% - 80px);
+        top: 16px;
+        width: 90%;
+    }
+    .toast {
+        width: 100%;
+        justify-content: center;
     }
 }
 </style>
@@ -1022,11 +1092,37 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
 
-    let icon = 'ℹ️';
-    if (type === 'success') icon = '✅';
-    if (type === 'error') icon = '❌';
+    let iconSvg = '';
+    if (type === 'success') {
+        iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L22 12L12 22L2 12L12 2z"/><polyline points="8 12 11 15 16 10"/></svg>`;
+    } else if (type === 'error') {
+        iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L22 12L12 22L2 12L12 2z"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+    } else {
+        iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+    }
 
-    toast.innerHTML = `<span class="toast-icon">${icon}</span><span>${escapeHtml(message)}</span>`;
+    toast.innerHTML = `
+        <div class="toast-progress"></div>
+        <div class="toast-content">
+            <div class="toast-icon">${iconSvg}</div>
+            <div class="toast-message">${escapeHtml(message)}</div>
+        </div>
+    `;
+
+    const progressBar = toast.querySelector('.toast-progress');
+
+    const removeToast = () => {
+        if (!toast.parentElement || toast.classList.contains('hide')) return;
+        toast.classList.remove('show');
+        toast.classList.add('hide');
+        progressBar.style.animationPlayState = 'paused';
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 350);
+    };
+
     toastContainer.appendChild(toast);
 
     requestAnimationFrame(() => {
@@ -1034,13 +1130,8 @@ function showToast(message, type = 'info') {
     });
 
     setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            if (toast.parentElement) {
-                toastContainer.removeChild(toast);
-            }
-        }, 320);
-    }, 2600);
+        removeToast();
+    }, 3350);
 }
 
 function showLoader() {

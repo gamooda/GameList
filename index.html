@@ -97,6 +97,21 @@ h1 {
     align-items: center;
     gap: 8px;
 }
+.main-icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+}
+.small-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
 .share-bar {
     display: flex;
     gap: 8px;
@@ -345,6 +360,9 @@ h1 {
     font-size: 11px;
     font-weight: 600;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 .user-rating-badge {
     color: #fff;
@@ -354,6 +372,9 @@ h1 {
     font-weight: 700;
     white-space: nowrap;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 .user-time-badge {
     color: #34d399;
@@ -362,6 +383,9 @@ h1 {
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 .game-tags-view {
     display: flex;
@@ -953,7 +977,10 @@ h1 {
 <body>
 <div class="app">
     <header>
-        <h1>🎮 Game Tracker</h1>
+        <h1>
+            <svg class="main-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h4m-2-2v4m7-1h.01M18 10h.01"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+            Game Tracker
+        </h1>
         <div class="share-bar">
             <input type="text" id="shareLinkInput" placeholder="Поделиться списком" readonly>
             <button class="btn btn-primary" id="copyShareBtn">Копировать</button>
@@ -1170,7 +1197,12 @@ function renderGames() {
         const bgImg = game.background_image ? `url('${game.background_image}')` : 'none';
 
         const tagsHtml = (game.tags || []).map(tag => `<span class="game-tag-view">${escapeHtml(tag)}</span>`).join('');
-        const userRatingHtml = game.userRating ? `<div class="user-rating-badge" style="background: ${RATING_COLORS[game.userRating]}">⭐ ${game.userRating} / 10</div>` : '';
+        
+        const userRatingHtml = game.userRating ? `
+            <div class="user-rating-badge" style="background: ${RATING_COLORS[game.userRating]}">
+                <svg class="small-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                ${game.userRating} / 10
+            </div>` : '';
 
         let timeStr = '';
         if (game.userPlaytime) {
@@ -1178,7 +1210,12 @@ function renderGames() {
             const m = Math.round((game.userPlaytime - h) * 60);
             timeStr = formatTime(h, m);
         }
-        const userTimeHtml = timeStr ? `<span class="user-time-badge">⏱ Моё: ${timeStr}</span>` : '';
+        
+        const userTimeHtml = timeStr ? `
+            <span class="user-time-badge">
+                <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3L19 3"/><path d="M12 3v2"/></svg>
+                Моё: ${timeStr}
+            </span>` : '';
 
         const notesPreview = game.notes ? `<div class="notes-preview">"${escapeHtml(game.notes)}"</div>` : '';
         const delay = Math.min(index * 0.04, 0.8);
@@ -1192,13 +1229,22 @@ function renderGames() {
                     
                     <div class="meta-row">
                         <div class="meta-left">
-                            <span>⏱ HLTB: ${game.playtime ? game.playtime + ' ч' : '—'}</span>
+                            <span class="badge">
+                                <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                HLTB: ${game.playtime ? game.playtime + ' ч' : '—'}
+                            </span>
                             ${userTimeHtml}
-                            <span>📅 ${game.released ? game.released.slice(0, 4) : '—'}</span>
+                            <span class="badge">
+                                <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                ${game.released ? game.released.slice(0, 4) : '—'}
+                            </span>
                         </div>
                         <div class="meta-right">
                             ${userRatingHtml}
-                            <div class="game-rating-badge">Народная: ${game.rating || '—'}</div>
+                            <div class="game-rating-badge">
+                                <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                Народная: ${game.rating || '—'}
+                            </div>
                             <button class="action-btn edit-btn" data-index="${index}">Изменить</button>
                         </div>
                     </div>

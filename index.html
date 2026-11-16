@@ -14,9 +14,11 @@
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
+    background: #09090b;
 }
 ::-webkit-scrollbar-track {
-    background: var(--bg);
+    background: #09090b;
+    border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb {
     background: #333338;
@@ -24,6 +26,9 @@
 }
 ::-webkit-scrollbar-thumb:hover {
     background: #4a4a50;
+}
+::-webkit-scrollbar-corner {
+    background: #09090b;
 }
 
 * {
@@ -66,20 +71,20 @@ input[type=number] {
 html {
     scrollbar-gutter: stable;
     scrollbar-width: thin;
-    scrollbar-color: #333338 var(--bg);
-    background-color: var(--bg);
+    scrollbar-color: #333338 #09090b;
+    background-color: #09090b;
 }
 html, body {
     overflow-x: hidden;
-    background-color: var(--bg);
+    background-color: #09090b;
 }
 html.modal-open, body.modal-open {
     overflow: hidden !important;
-    height: 100vh !important;
 }
 
 body {
     background: radial-gradient(circle at 50% -20%, #1e1e2e 0%, #09090b 80%);
+    background-color: #09090b;
     background-attachment: fixed;
     color: var(--text);
     min-height: 100vh;
@@ -271,6 +276,7 @@ h1 {
     overflow-x: hidden;
     position: relative;
     overscroll-behavior: contain;
+    scrollbar-color: #333338 #18181b;
 }
 .suggestions-scroll.no-scroll {
     overflow-y: hidden !important;
@@ -689,6 +695,7 @@ h1 {
     max-height: 90vh;
     overflow-y: auto;
     overscroll-behavior: contain;
+    scrollbar-color: #333338 #18181b;
 }
 .modal.active .modal-content {
     transform: translateY(0) scale(1);
@@ -1337,12 +1344,43 @@ let currentRotation = { x: 0, y: 0 };
 let isSpinning = false;
 let spinAnimationId = null;
 let lastTime = performance.now();
-let scrollY = 0;
 let activeTargetElement = null;
 let isTransitioning = false;
 let openFallTimer = null;
 let closeFallTimer = null;
 let imgLoadTimer = null;
+
+let pageScrollLockCount = 0;
+let pageScrollY = 0;
+
+function lockPageScroll() {
+    if (pageScrollLockCount === 0) {
+        pageScrollY = window.scrollY;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${pageScrollY}px`;
+        document.body.style.left = '0';
+        document.body.style.right = '0';
+        document.body.style.width = '100%';
+        document.documentElement.classList.add('modal-open');
+        document.body.classList.add('modal-open');
+    }
+    pageScrollLockCount++;
+}
+
+function unlockPageScroll() {
+    if (pageScrollLockCount <= 0) return;
+    pageScrollLockCount--;
+    if (pageScrollLockCount === 0) {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+        document.documentElement.classList.remove('modal-open');
+        document.body.classList.remove('modal-open');
+        window.scrollTo(0, pageScrollY);
+    }
+}
 
 function getPlaytimeColor(hours) {
     const h = Number(hours) || 0;
@@ -1398,42 +1436,6 @@ function sanitizeUserFields(g) {
     return { userRating, userPlaytime, tags, notes };
 }
 
-function packGamesString(list) {
-    return list.map(g => {
-        let mask = 0;
-        const custom = [];
-        (g.tags || []).forEach(t => {
-            const idx = PRESET_TAGS.indexOf(t);
-            if (idx !== -1) mask |= (1 << idx);
-            else custom.push(t.replace(/[|;:]/g, ''));
-        });
-        const tPart = mask || custom.length ? mask.toString(36) + (custom.length ? ':' + custom.join(',') : '') : '';
-        return `${g.id}|${g.userRating || 0}|${g.userPlaytime || 0}|${tPart}|${(g.notes || '').replace(/[|;]/g, '')}`;
-    }).join(';');
-}
-
-function unpackGamesString(str) {
-    return str.split(';').filter(Boolean).map(part => {
-        const [idStr, r, p, tPart, n] = part.split('|');
-        let tags = [];
-        if (tPart) {
-            const [maskStr, customStr] = tPart.split(':');
-            const mask = parseInt(maskStr, 36) || 0;
-            PRESET_TAGS.forEach((tag, i) => {
-                if (mask & (1 << i)) tags.push(tag);
-            });
-            if (customStr) tags.push(...customStr.split(','));
-        }
-        return {
-            i: isNaN(Number(idStr)) ? idStr : Number(idStr),
-            r: parseInt(r, 10) || 0,
-            p: parseFloat(p) || 0,
-            t: tags,
-            n: n || ''
-        };
-    });
-}
-
 function writeVarint(out, value) {
     let v = Math.max(0, Math.floor(Number(value) || 0));
     while (v >= 128) {
@@ -1441,41 +1443,6 @@ function writeVarint(out, value) {
         v = Math.floor(v / 128);
     }
     out.push(v);
-}
-
-function writePackedString(out, encoder, str) {
-    const bytes = encoder.encode(str);
-    writeVarint(out, bytes.length);
-    for (let i = 0; i < bytes.length; i++) out.push(bytes[i]);
-}
-
-function packGamesV2(list) {
-    const out = [];
-    const encoder = new TextEncoder();
-    out.push(2);
-    writeVarint(out, list.length);
-    for (const g of list) {
-        const idNum = Number(g.id);
-        if (Number.isSafeInteger(idNum) && idNum > 0) {
-            writeVarint(out, idNum);
-        } else {
-            writeVarint(out, 0);
-            writePackedString(out, encoder, String(g.id));
-        }
-        out.push(g.userRating || 0);
-        writeVarint(out, Math.round((g.userPlaytime || 0) * 60));
-        const tags = g.tags || [];
-        let mask = 0;
-        PRESET_TAGS.forEach((tag, i) => {
-            if (tags.includes(tag)) mask |= (1 << i);
-        });
-        out.push(mask & 0xff, (mask >> 8) & 0xff);
-        const custom = tags.filter(t => !PRESET_TAGS.includes(t));
-        writeVarint(out, custom.length);
-        for (const t of custom) writePackedString(out, encoder, t);
-        writePackedString(out, encoder, g.notes || '');
-    }
-    return new Uint8Array(out);
 }
 
 function createReader(bytes) {
@@ -1504,44 +1471,6 @@ function createReader(bytes) {
             return slice;
         }
     };
-}
-
-function readPackedString(reader, decoder, maxBytes) {
-    const len = reader.varint();
-    if (len > maxBytes) throw new Error('String too long');
-    return decoder.decode(reader.bytes(len));
-}
-
-function unpackGamesV2(bytes) {
-    const reader = createReader(bytes);
-    const decoder = new TextDecoder();
-    if (reader.byte() !== 2) throw new Error('Unsupported format');
-    const count = reader.varint();
-    if (count > 1000) throw new Error('Too many games');
-    const entries = [];
-    for (let k = 0; k < count; k++) {
-        let id = reader.varint();
-        if (id === 0) id = readPackedString(reader, decoder, 200);
-        const rating = reader.byte();
-        const minutes = reader.varint();
-        const mask = reader.byte() | (reader.byte() << 8);
-        const tags = [];
-        PRESET_TAGS.forEach((tag, i) => {
-            if (mask & (1 << i)) tags.push(tag);
-        });
-        const customCount = reader.varint();
-        if (customCount > 30) throw new Error('Too many tags');
-        for (let j = 0; j < customCount; j++) tags.push(readPackedString(reader, decoder, 200));
-        const notes = readPackedString(reader, decoder, 8000);
-        entries.push({
-            i: id,
-            r: rating <= 10 ? rating : 0,
-            p: minutes > 0 ? minutes / 60 : 0,
-            t: tags,
-            n: notes
-        });
-    }
-    return entries;
 }
 
 function bytesToBase64Url(bytes) {
@@ -1589,6 +1518,225 @@ async function inflateRaw(bytes) {
         offset += c.length;
     }
     return out;
+}
+
+function packGamesCompact(list) {
+    const sorted = [...list].sort((a, b) => {
+        const aid = Number(a.id), bid = Number(b.id);
+        if (Number.isFinite(aid) && Number.isFinite(bid)) return aid - bid;
+        return String(a.id).localeCompare(String(b.id));
+    });
+    
+    const out = [];
+    writeVarint(out, sorted.length);
+    
+    let prevId = 0;
+    const encoder = new TextEncoder();
+    
+    for (const g of sorted) {
+        const rating = Math.max(0, Math.min(10, Math.round(g.userRating) || 0));
+        const minutes = Math.round((g.userPlaytime || 0) * 60);
+        const tags = g.tags || [];
+        const notes = g.notes || '';
+        const custom = tags.filter(t => !PRESET_TAGS.includes(t));
+        
+        let mask = 0;
+        PRESET_TAGS.forEach((t, i) => {
+            if (tags.includes(t)) mask |= (1 << i);
+        });
+        
+        const hasPreset = mask !== 0;
+        const hasCustom = custom.length > 0;
+        const hasPlaytime = minutes > 0;
+        const hasNotes = notes.length > 0;
+        
+        out.push(
+            (rating & 0x0f) |
+            (hasPreset ? 0x10 : 0) |
+            (hasCustom ? 0x20 : 0) |
+            (hasPlaytime ? 0x40 : 0) |
+            (hasNotes ? 0x80 : 0)
+        );
+        
+        const idNum = Number(g.id);
+        if (Number.isSafeInteger(idNum) && idNum > 0) {
+            writeVarint(out, idNum - prevId + 1);
+            prevId = idNum;
+        } else {
+            writeVarint(out, 0);
+            const b = encoder.encode(String(g.id));
+            writeVarint(out, b.length);
+            for (const x of b) out.push(x);
+        }
+        
+        if (hasPlaytime) writeVarint(out, minutes);
+        
+        if (hasPreset) {
+            out.push(mask & 0xff, (mask >> 8) & 0xff);
+        }
+        
+        if (hasCustom) {
+            writeVarint(out, custom.length);
+            for (const t of custom) {
+                const b = encoder.encode(t);
+                writeVarint(out, b.length);
+                for (const x of b) out.push(x);
+            }
+        }
+        
+        if (hasNotes) {
+            const b = encoder.encode(notes);
+            writeVarint(out, b.length);
+            for (const x of b) out.push(x);
+        }
+    }
+    
+    return new Uint8Array(out);
+}
+
+function unpackGamesCompact(bytes) {
+    const reader = createReader(bytes);
+    const decoder = new TextDecoder();
+    const count = reader.varint();
+    if (count > 1000) throw new Error('Too many games');
+    
+    const entries = [];
+    let prevId = 0;
+    
+    for (let i = 0; i < count; i++) {
+        const header = reader.byte();
+        const rating = header & 0x0f;
+        const hasPreset = (header & 0x10) !== 0;
+        const hasCustom = (header & 0x20) !== 0;
+        const hasPlaytime = (header & 0x40) !== 0;
+        const hasNotes = (header & 0x80) !== 0;
+        
+        const delta = reader.varint();
+        let id;
+        if (delta === 0) {
+            const len = reader.varint();
+            if (len > 200) throw new Error('ID too long');
+            id = decoder.decode(reader.bytes(len));
+        } else {
+            id = prevId + delta - 1;
+            prevId = id;
+        }
+        
+        let minutes = 0;
+        if (hasPlaytime) minutes = reader.varint();
+        
+        let tags = [];
+        if (hasPreset) {
+            const mask = reader.byte() | (reader.byte() << 8);
+            PRESET_TAGS.forEach((t, idx) => {
+                if (mask & (1 << idx)) tags.push(t);
+            });
+        }
+        if (hasCustom) {
+            const cc = reader.varint();
+            if (cc > 30) throw new Error('Too many tags');
+            for (let j = 0; j < cc; j++) {
+                const len = reader.varint();
+                if (len > 200) throw new Error('Tag too long');
+                tags.push(decoder.decode(reader.bytes(len)));
+            }
+        }
+        
+        let notes = '';
+        if (hasNotes) {
+            const len = reader.varint();
+            if (len > 8000) throw new Error('Notes too long');
+            notes = decoder.decode(reader.bytes(len));
+        }
+        
+        entries.push({
+            i: id,
+            r: rating,
+            p: minutes > 0 ? minutes / 60 : 0,
+            t: tags,
+            n: notes
+        });
+    }
+    
+    return entries;
+}
+
+function packGamesString(list) {
+    return list.map(g => {
+        let mask = 0;
+        const custom = [];
+        (g.tags || []).forEach(t => {
+            const idx = PRESET_TAGS.indexOf(t);
+            if (idx !== -1) mask |= (1 << idx);
+            else custom.push(t.replace(/[|;:]/g, ''));
+        });
+        const tPart = mask || custom.length ? mask.toString(36) + (custom.length ? ':' + custom.join(',') : '') : '';
+        return `${g.id}|${g.userRating || 0}|${g.userPlaytime || 0}|${tPart}|${(g.notes || '').replace(/[|;]/g, '')}`;
+    }).join(';');
+}
+
+function unpackGamesString(str) {
+    return str.split(';').filter(Boolean).map(part => {
+        const [idStr, r, p, tPart, n] = part.split('|');
+        let tags = [];
+        if (tPart) {
+            const [maskStr, customStr] = tPart.split(':');
+            const mask = parseInt(maskStr, 36) || 0;
+            PRESET_TAGS.forEach((tag, i) => {
+                if (mask & (1 << i)) tags.push(tag);
+            });
+            if (customStr) tags.push(...customStr.split(','));
+        }
+        return {
+            i: isNaN(Number(idStr)) ? idStr : Number(idStr),
+            r: parseInt(r, 10) || 0,
+            p: parseFloat(p) || 0,
+            t: tags,
+            n: n || ''
+        };
+    });
+}
+
+function unpackGamesV2(bytes) {
+    const reader = createReader(bytes);
+    const decoder = new TextDecoder();
+    if (reader.byte() !== 2) throw new Error('Unsupported format');
+    const count = reader.varint();
+    if (count > 1000) throw new Error('Too many games');
+    const entries = [];
+    for (let k = 0; k < count; k++) {
+        let id = reader.varint();
+        if (id === 0) {
+            const len = reader.varint();
+            if (len > 200) throw new Error('ID too long');
+            id = decoder.decode(reader.bytes(len));
+        }
+        const rating = reader.byte();
+        const minutes = reader.varint();
+        const mask = reader.byte() | (reader.byte() << 8);
+        const tags = [];
+        PRESET_TAGS.forEach((tag, i) => {
+            if (mask & (1 << i)) tags.push(tag);
+        });
+        const customCount = reader.varint();
+        if (customCount > 30) throw new Error('Too many tags');
+        for (let j = 0; j < customCount; j++) {
+            const len = reader.varint();
+            if (len > 200) throw new Error('Tag too long');
+            tags.push(decoder.decode(reader.bytes(len)));
+        }
+        const notesLen = reader.varint();
+        if (notesLen > 8000) throw new Error('Notes too long');
+        const notes = decoder.decode(reader.bytes(notesLen));
+        entries.push({
+            i: id,
+            r: rating <= 10 ? rating : 0,
+            p: minutes > 0 ? minutes / 60 : 0,
+            t: tags,
+            n: notes
+        });
+    }
+    return entries;
 }
 
 async function initDatabase() {
@@ -1898,9 +2046,8 @@ function openEditModal(index) {
     editingGameIndex = index;
     editingDraft = JSON.parse(JSON.stringify(games[index]));
     renderEditModal();
+    lockPageScroll();
     editModal.classList.add('active');
-    document.documentElement.classList.add('modal-open');
-    document.body.classList.add('modal-open');
 }
 
 function closeEditModal() {
@@ -1910,8 +2057,7 @@ function closeEditModal() {
         renderGames();
     }
     editModal.classList.remove('active');
-    document.documentElement.classList.remove('modal-open');
-    document.body.classList.remove('modal-open');
+    unlockPageScroll();
     resetDeleteState();
     editingGameIndex = null;
     editingDraft = null;
@@ -2071,75 +2217,94 @@ async function generateShareLink() {
         return;
     }
     const baseUrl = window.location.origin + window.location.pathname;
-    let url = '';
-    
+    const candidates = [];
+
+    try {
+        const packed = packGamesCompact(games);
+        const raw = bytesToBase64Url(packed);
+        candidates.push({ url: baseUrl + '#r=' + raw, len: raw.length });
+
+        if (typeof CompressionStream !== 'undefined') {
+            try {
+                const deflated = await deflateRaw(packed);
+                const def = bytesToBase64Url(deflated);
+                candidates.push({ url: baseUrl + '#c=' + def, len: def.length });
+            } catch (e) {}
+        }
+    } catch (e) {}
+
     if (typeof LZString !== 'undefined') {
         try {
             const str = packGamesString(games);
-            const compressed = LZString.compressToEncodedURIComponent(str);
-            url = `${baseUrl}#s=${compressed}`;
+            const comp = LZString.compressToEncodedURIComponent(str);
+            candidates.push({ url: baseUrl + '#s=' + comp, len: comp.length });
         } catch (e) {}
     }
-    
-    if (!url && typeof CompressionStream !== 'undefined') {
-        try {
-            const packed = packGamesV2(games);
-            const deflated = await deflateRaw(packed);
-            url = `${baseUrl}#d=${bytesToBase64Url(deflated)}`;
-        } catch (e) {}
+
+    let best = null;
+    for (const c of candidates) {
+        if (!best || c.len < best.len) best = c;
     }
-    
-    if (!url && typeof LZString !== 'undefined') {
-        const data = games.map(g => ({
-            i: g.id,
-            r: g.userRating || 0,
-            p: g.userPlaytime || 0,
-            t: g.tags && g.tags.length ? g.tags : undefined,
-            n: g.notes || undefined
-        }));
-        url = `${baseUrl}#data=${LZString.compressToEncodedURIComponent(JSON.stringify(data))}`;
-    }
-    
-    if (token === shareGenToken) {
-        shareLinkInput.value = url;
+
+    if (token === shareGenToken && best) {
+        shareLinkInput.value = best.url;
     }
 }
 
 async function loadFromHash() {
     const hash = window.location.hash;
+    const isR = hash.startsWith('#r=');
+    const isC = hash.startsWith('#c=');
     const isS = hash.startsWith('#s=');
     const isV2 = hash.startsWith('#d=');
     const isV1 = hash.startsWith('#data=');
-    
-    if (isS || isV2 || isV1) {
-        const payload = isS ? hash.slice(3) : (isV2 ? hash.slice(3) : hash.slice(6));
-        
-        if (isS && typeof LZString === 'undefined') {
-            showToast('Библиотека сжатия не загрузилась', 'error');
-            renderGames();
-            generateShareLink();
-            return;
-        }
-        
-        if (isV2 && typeof DecompressionStream === 'undefined') {
-            showToast('Обнови браузер, чтобы открыть эту ссылку', 'error');
-            renderGames();
-            generateShareLink();
-            return;
-        }
-        
+
+    if (isR || isC || isS || isV2 || isV1) {
+        let payload;
+        if (isR || isC || isS || isV2) payload = hash.slice(3);
+        else payload = hash.slice(6);
+
         try {
             let entries = null;
-            if (isS) {
+
+            if (isR) {
+                entries = unpackGamesCompact(base64UrlToBytes(payload));
+            } else if (isC) {
+                if (typeof DecompressionStream === 'undefined') {
+                    showToast('Обнови браузер, чтобы открыть эту ссылку', 'error');
+                    renderGames();
+                    generateShareLink();
+                    return;
+                }
+                entries = unpackGamesCompact(await inflateRaw(base64UrlToBytes(payload)));
+            } else if (isS) {
+                if (typeof LZString === 'undefined') {
+                    showToast('Библиотека сжатия не загрузилась', 'error');
+                    renderGames();
+                    generateShareLink();
+                    return;
+                }
                 const str = LZString.decompressFromEncodedURIComponent(payload);
                 entries = str ? unpackGamesString(str) : null;
             } else if (isV2) {
+                if (typeof DecompressionStream === 'undefined') {
+                    showToast('Обнови браузер, чтобы открыть эту ссылку', 'error');
+                    renderGames();
+                    generateShareLink();
+                    return;
+                }
                 entries = unpackGamesV2(await inflateRaw(base64UrlToBytes(payload)));
             } else {
+                if (typeof LZString === 'undefined') {
+                    showToast('Библиотека сжатия не загрузилась', 'error');
+                    renderGames();
+                    generateShareLink();
+                    return;
+                }
                 const json = LZString.decompressFromEncodedURIComponent(payload);
                 entries = json ? JSON.parse(json) : null;
             }
-            
+
             if (Array.isArray(entries) && entries.length > 0) {
                 const seen = new Set();
                 const imported = [];
@@ -2467,14 +2632,14 @@ function openLightbox(index, targetElement) {
     clearLightboxTimers();
     stopSpinLoop();
 
+    const startRect = targetElement.getBoundingClientRect();
+
     delete lightboxImgFront.dataset.fallbackApplied;
     delete lightboxImgBack.dataset.fallbackApplied;
     lightboxImgFront.src = imgUrl;
     lightboxImgBack.src = imgUrl;
 
-    scrollY = window.scrollY;
-    document.documentElement.classList.add('modal-open');
-    document.body.classList.add('modal-open');
+    lockPageScroll();
 
     targetElement.style.opacity = '0';
 
@@ -2483,8 +2648,6 @@ function openLightbox(index, targetElement) {
     lightboxImgBack.style.transition = 'none';
 
     lightbox.classList.add('active');
-
-    const startRect = targetElement.getBoundingClientRect();
 
     lightboxCard.style.position = 'fixed';
     lightboxCard.style.top = `${startRect.top}px`;
@@ -2653,9 +2816,7 @@ function closeLightboxFn() {
 function forceClose() {
     clearLightboxTimers();
     stopSpinLoop();
-    document.documentElement.classList.remove('modal-open');
-    document.body.classList.remove('modal-open');
-    window.scrollTo(0, scrollY);
+    unlockPageScroll();
 
     lightboxCard.style.cssText = '';
     lightboxImgFront.style.cssText = '';

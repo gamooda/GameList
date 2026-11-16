@@ -836,7 +836,6 @@ h1 {
     gap: 6px;
 }
 .hltb-stat strong {
-    color: var(--text);
     font-weight: 600;
 }
 .edit-row {
@@ -2157,23 +2156,29 @@ function renderEditModal() {
     const hltbMainPlus = dbGame.main_plus || 0;
     const hltbCompletionist = dbGame.completionist || 0;
 
+    const roundedHltbRating = Math.max(0, Math.min(10, Math.round(hltbRating) || 0));
+    const hltbRatingColor = RATING_COLORS[roundedHltbRating] || 'currentColor';
+    const hltbMainColor = getPlaytimeColor(hltbMain);
+    const hltbMainPlusColor = getPlaytimeColor(hltbMainPlus);
+    const hltbCompletionistColor = getPlaytimeColor(hltbCompletionist);
+
     const hltbStatsHtml = `
         <div class="hltb-stats">
             <div class="hltb-stat">
-                <svg class="small-icon" style="color: #eab308" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                HLTB: <strong>${hltbRating ? hltbRating + ' / 10' : '—'}</strong>
+                <svg class="small-icon" style="color: ${hltbRatingColor}" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                HLTB: <strong style="color: ${hltbRatingColor}">${hltbRating ? hltbRating + ' / 10' : '—'}</strong>
             </div>
             <div class="hltb-stat">
-                <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                Сюжет: <strong>${hltbMain ? hltbMain + ' ч' : '—'}</strong>
+                <svg class="small-icon" style="color: ${hltbMainColor}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Сюжет: <strong style="color: ${hltbMainColor}">${hltbMain ? hltbMain + ' ч' : '—'}</strong>
             </div>
             <div class="hltb-stat">
-                <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                Сюжет + доп: <strong>${hltbMainPlus ? hltbMainPlus + ' ч' : '—'}</strong>
+                <svg class="small-icon" style="color: ${hltbMainPlusColor}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Сюжет + доп: <strong style="color: ${hltbMainPlusColor}">${hltbMainPlus ? hltbMainPlus + ' ч' : '—'}</strong>
             </div>
             <div class="hltb-stat">
-                <svg class="small-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                100%: <strong>${hltbCompletionist ? hltbCompletionist + ' ч' : '—'}</strong>
+                <svg class="small-icon" style="color: ${hltbCompletionistColor}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                100%: <strong style="color: ${hltbCompletionistColor}">${hltbCompletionist ? hltbCompletionist + ' ч' : '—'}</strong>
             </div>
         </div>
     `;

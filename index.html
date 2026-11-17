@@ -176,6 +176,11 @@ h1 {
     border-color: #555;
     color: var(--text);
 }
+.btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+    transform: none;
+}
 .btn-primary {
     background: var(--primary-grad);
     border: none;
@@ -402,17 +407,52 @@ h1 {
 }
 
 .suggestion-item {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     display: flex;
     gap: 14px;
     padding: 14px 18px;
     cursor: pointer;
     border-bottom: 1px solid #27272a;
     align-items: center;
+    background: rgba(24, 24, 27, 0.9);
     transition: background 0.2s ease;
     opacity: 0;
     filter: blur(8px);
     transform: translateY(15px) scale(0.95);
     animation: premiumAppear 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.suggestion-bg {
+    position: absolute;
+    inset: -22px;
+    z-index: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(25px) brightness(0.28) saturate(1.2);
+    transform: scale(1.08);
+    opacity: 0.9;
+    pointer-events: none;
+    transition: opacity 0.3s ease, filter 0.3s ease;
+}
+.suggestion-item::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(90deg, rgba(24, 24, 27, 0.72), rgba(24, 24, 27, 0.62) 55%, rgba(24, 24, 27, 0.78));
+    pointer-events: none;
+    transition: background 0.25s ease;
+}
+.suggestion-item:hover {
+    background: rgba(35, 35, 43, 0.18);
+}
+.suggestion-item:hover .suggestion-bg {
+    opacity: 1;
+    filter: blur(22px) brightness(0.36) saturate(1.3);
+}
+.suggestion-item:hover::after {
+    background: linear-gradient(90deg, rgba(24, 24, 27, 0.58), rgba(24, 24, 27, 0.48) 55%, rgba(24, 24, 27, 0.68));
 }
 @keyframes premiumAppear {
     0% {
@@ -429,16 +469,14 @@ h1 {
 .suggestion-item:last-child {
     border-bottom: none;
 }
-.suggestion-item:hover {
-    background: #23232b;
-}
 .img-wrapper {
+    position: relative;
+    z-index: 2;
     width: 60px;
     height: 60px;
     border-radius: 10px;
     background: #18181b;
     flex-shrink: 0;
-    position: relative;
     overflow: hidden;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
     display: flex;
@@ -480,6 +518,8 @@ h1 {
 }
 
 .suggestion-info {
+    position: relative;
+    z-index: 2;
     flex: 1;
     min-width: 0;
 }
@@ -729,17 +769,15 @@ body.is-moving .game-card.moving .edit-btn {
     white-space: nowrap;
 }
 .notes-preview {
+    display: block;
     font-size: 13px;
     color: #ccc;
     font-style: italic;
-    line-height: 1.4;
+    line-height: 1.5;
     margin-top: 4px;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
     overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 .action-btn {
     background: transparent;
@@ -1431,7 +1469,7 @@ body.is-moving .game-card.moving .edit-btn {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </div>
         <input type="text" class="search-input" id="searchInput" placeholder="Поиск игр..." autocomplete="off" aria-label="Поиск игр">
-        
+
         <div class="suggestions-wrapper" id="suggestionsWrapper">
             <div class="suggestions-scroll" id="suggestionsScroll"></div>
             <div class="fade-overlay hidden" id="fadeOverlay"></div>
@@ -1486,6 +1524,7 @@ const RATING_COLORS = ['', '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16'
 const FALLBACK_COVER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect width="400" height="200" fill="#18181f"/><g fill="none" stroke="#3f3f46" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(152,52) scale(4)"><path d="M6 11h4m-2-2v4m7-1h.01M18 10h.01"/><rect x="2" y="6" width="20" height="12" rx="6"/></g></svg>');
 
 const STORAGE_KEY = 'game_tracker_games_v19';
+const SHORT_LINK_CACHE_KEY = 'game_tracker_short_link_cache_v1';
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
@@ -1785,31 +1824,31 @@ function packGamesCompactV2(list) {
         if (Number.isFinite(aid) && Number.isFinite(bid)) return aid - bid;
         return String(a.id).localeCompare(String(b.id));
     });
-    
+
     const out = [];
     out.push(2);
     writeVarint(out, sorted.length);
-    
+
     let prevId = 0;
     const encoder = new TextEncoder();
-    
+
     for (const g of sorted) {
         const rating = Math.max(0, Math.min(10, Math.round(g.userRating) || 0));
         const minutes = Math.round((g.userPlaytime || 0) * 60);
         const tags = g.tags || [];
         const notes = g.notes || '';
         const custom = tags.filter(t => !PRESET_TAGS.includes(t));
-        
+
         let mask = 0;
         PRESET_TAGS.forEach((t, i) => {
             if (tags.includes(t)) mask |= (1 << i);
         });
-        
+
         const hasPreset = mask !== 0;
         const hasCustom = custom.length > 0;
         const hasPlaytime = minutes > 0;
         const hasNotes = notes.length > 0;
-        
+
         out.push(
             (rating & 0x0f) |
             (hasPreset ? 0x10 : 0) |
@@ -1817,7 +1856,7 @@ function packGamesCompactV2(list) {
             (hasPlaytime ? 0x40 : 0) |
             (hasNotes ? 0x80 : 0)
         );
-        
+
         const idNum = Number(g.id);
         if (Number.isSafeInteger(idNum) && idNum > 0) {
             writeVarint(out, idNum - prevId + 1);
@@ -1828,13 +1867,13 @@ function packGamesCompactV2(list) {
             writeVarint(out, b.length);
             for (const x of b) out.push(x);
         }
-        
+
         if (hasPlaytime) writeVarint(out, minutes);
-        
+
         if (hasPreset) {
             out.push(mask & 0xff, (mask >> 8) & 0xff);
         }
-        
+
         if (hasCustom) {
             writeVarint(out, custom.length);
             for (const t of custom) {
@@ -1843,29 +1882,29 @@ function packGamesCompactV2(list) {
                 for (const x of b) out.push(x);
             }
         }
-        
+
         if (hasNotes) {
             const b = encoder.encode(notes);
             writeVarint(out, b.length);
             for (const x of b) out.push(x);
         }
     }
-    
+
     return new Uint8Array(out);
 }
 
 function unpackGamesCompactV2(bytes) {
     const reader = createReader(bytes);
     const decoder = new TextDecoder();
-    
+
     if (reader.byte() !== 2) throw new Error('Unsupported format V2');
-    
+
     const count = reader.varint();
     if (count > 1000) throw new Error('Too many games');
-    
+
     const entries = [];
     let prevId = 0;
-    
+
     for (let i = 0; i < count; i++) {
         const header = reader.byte();
         const rating = header & 0x0f;
@@ -1873,7 +1912,7 @@ function unpackGamesCompactV2(bytes) {
         const hasCustom = (header & 0x20) !== 0;
         const hasPlaytime = (header & 0x40) !== 0;
         const hasNotes = (header & 0x80) !== 0;
-        
+
         const delta = reader.varint();
         let id;
         if (delta === 0) {
@@ -1884,10 +1923,10 @@ function unpackGamesCompactV2(bytes) {
             id = prevId + delta - 1;
             prevId = id;
         }
-        
+
         let minutes = 0;
         if (hasPlaytime) minutes = reader.varint();
-        
+
         let tags = [];
         if (hasPreset) {
             const mask = reader.byte() | (reader.byte() << 8);
@@ -1904,14 +1943,14 @@ function unpackGamesCompactV2(bytes) {
                 tags.push(decoder.decode(reader.bytes(len)));
             }
         }
-        
+
         let notes = '';
         if (hasNotes) {
             const len = reader.varint();
             if (len > 8000) throw new Error('Notes too long');
             notes = decoder.decode(reader.bytes(len));
         }
-        
+
         entries.push({
             i: id,
             r: rating,
@@ -1920,7 +1959,7 @@ function unpackGamesCompactV2(bytes) {
             n: notes
         });
     }
-    
+
     return entries;
 }
 
@@ -1928,26 +1967,26 @@ function packGamesCompactV3(list) {
     const out = [];
     out.push(0x47, 0x4C, 0x33);
     writeVarint(out, list.length);
-    
+
     const encoder = new TextEncoder();
-    
+
     for (const g of list) {
         const rating = Math.max(0, Math.min(10, Math.round(g.userRating) || 0));
         const minutes = Math.round((g.userPlaytime || 0) * 60);
         const tags = g.tags || [];
         const notes = g.notes || '';
         const custom = tags.filter(t => !PRESET_TAGS.includes(t));
-        
+
         let mask = 0;
         PRESET_TAGS.forEach((t, i) => {
             if (tags.includes(t)) mask |= (1 << i);
         });
-        
+
         const hasPreset = mask !== 0;
         const hasCustom = custom.length > 0;
         const hasPlaytime = minutes > 0;
         const hasNotes = notes.length > 0;
-        
+
         out.push(
             (rating & 0x0f) |
             (hasPreset ? 0x10 : 0) |
@@ -1955,7 +1994,7 @@ function packGamesCompactV3(list) {
             (hasPlaytime ? 0x40 : 0) |
             (hasNotes ? 0x80 : 0)
         );
-        
+
         const idNum = Number(g.id);
         if (Number.isSafeInteger(idNum) && idNum > 0) {
             writeVarint(out, idNum);
@@ -1965,13 +2004,13 @@ function packGamesCompactV3(list) {
             writeVarint(out, b.length);
             for (const x of b) out.push(x);
         }
-        
+
         if (hasPlaytime) writeVarint(out, minutes);
-        
+
         if (hasPreset) {
             out.push(mask & 0xff, (mask >> 8) & 0xff);
         }
-        
+
         if (hasCustom) {
             writeVarint(out, custom.length);
             for (const t of custom) {
@@ -1980,30 +2019,30 @@ function packGamesCompactV3(list) {
                 for (const x of b) out.push(x);
             }
         }
-        
+
         if (hasNotes) {
             const b = encoder.encode(notes);
             writeVarint(out, b.length);
             for (const x of b) out.push(x);
         }
     }
-    
+
     return new Uint8Array(out);
 }
 
 function unpackGamesCompactV3(bytes) {
     const reader = createReader(bytes);
     const decoder = new TextDecoder();
-    
+
     if (reader.byte() !== 0x47 || reader.byte() !== 0x4C || reader.byte() !== 0x33) {
         throw new Error('Unsupported format V3');
     }
-    
+
     const count = reader.varint();
     if (count > 1000) throw new Error('Too many games');
-    
+
     const entries = [];
-    
+
     for (let i = 0; i < count; i++) {
         const header = reader.byte();
         const rating = header & 0x0f;
@@ -2011,7 +2050,7 @@ function unpackGamesCompactV3(bytes) {
         const hasCustom = (header & 0x20) !== 0;
         const hasPlaytime = (header & 0x40) !== 0;
         const hasNotes = (header & 0x80) !== 0;
-        
+
         const idNum = reader.varint();
         let id;
         if (idNum === 0) {
@@ -2021,10 +2060,10 @@ function unpackGamesCompactV3(bytes) {
         } else {
             id = idNum;
         }
-        
+
         let minutes = 0;
         if (hasPlaytime) minutes = reader.varint();
-        
+
         let tags = [];
         if (hasPreset) {
             const mask = reader.byte() | (reader.byte() << 8);
@@ -2041,14 +2080,14 @@ function unpackGamesCompactV3(bytes) {
                 tags.push(decoder.decode(reader.bytes(len)));
             }
         }
-        
+
         let notes = '';
         if (hasNotes) {
             const len = reader.varint();
             if (len > 8000) throw new Error('Notes too long');
             notes = decoder.decode(reader.bytes(len));
         }
-        
+
         entries.push({
             i: id,
             r: rating,
@@ -2057,7 +2096,7 @@ function unpackGamesCompactV3(bytes) {
             n: notes
         });
     }
-    
+
     return entries;
 }
 
@@ -2322,7 +2361,7 @@ function renderGames() {
         const ratingText = game.rating ? escapeHtml(String(game.rating)) : '—';
 
         return `
-            <div class="game-card" data-game-index="${index}" data-game-id="${game.id}" style="animation-delay: ${delay}s">
+            <div class="game-card" data-game-index="${index}" data-game-id="${escapeHtml(String(game.id))}" style="animation-delay: ${delay}s">
                 <div class="card-actions">
                     <button class="action-btn edit-btn" type="button" data-index="${index}">Изменить</button>
                     <button class="action-btn move-btn" type="button" data-index="${index}">Переместить</button>
@@ -2331,7 +2370,7 @@ function renderGames() {
                 <div class="card-content">
                     <img class="game-cover" src="${escapeHtml(coverSrc)}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
                     <div class="game-title">${escapeHtml(game.name)}</div>
-                    
+
                     <div class="meta-row">
                         <div class="meta-left">
                             <span class="badge">
@@ -2352,7 +2391,7 @@ function renderGames() {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="game-tags-view">${tagsHtml}</div>
                     ${notesPreview}
                 </div>
@@ -2440,9 +2479,9 @@ function renderEditModal() {
                     </div>
                 </div>
             </div>
-            
+
             <textarea class="game-notes" id="modalNotesInput" rows="3" maxlength="2000" placeholder="Что понравилось, краткое описание...">${escapeHtml(game.notes || '')}</textarea>
-            
+
             <div class="edit-section">
                 <div class="edit-label">Теги:</div>
                 <div class="tags-picker" id="modalTagsPicker">${tagChips}</div>
@@ -2453,7 +2492,7 @@ function renderEditModal() {
                     </button>
                 </div>
             </div>
-            
+
             <div class="edit-actions">
                 <button class="action-btn btn-success" type="button" id="modalSaveBtn">Сохранить</button>
                 <button class="action-btn cancel" type="button" id="modalCancelBtn">Отмена</button>
@@ -2611,6 +2650,7 @@ function searchLocalGames(query) {
 
         return `
         <div class="suggestion-item" data-game-id="${escapeHtml(String(game.id))}" style="animation-delay: ${index * 0.04}s">
+            <div class="suggestion-bg" style="background-image: url('${cssUrl(imgSrc)}')"></div>
             <div class="img-wrapper">
                 <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(game.name)}">
                 <div class="spinner-small"></div>
@@ -2682,6 +2722,95 @@ async function generateShareLink() {
     if (token === shareGenToken && best) {
         shareLinkInput.value = best.url;
     }
+}
+
+function getCachedShortLink(longUrl) {
+    try {
+        const cached = JSON.parse(localStorage.getItem(SHORT_LINK_CACHE_KEY) || 'null');
+        return cached && cached.longUrl === longUrl && typeof cached.shortUrl === 'string' && /^https:\/\/is\.gd\/[A-Za-z0-9]+$/i.test(cached.shortUrl) ? cached.shortUrl : '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function cacheShortLink(longUrl, shortUrl) {
+    try {
+        localStorage.setItem(SHORT_LINK_CACHE_KEY, JSON.stringify({ longUrl, shortUrl }));
+    } catch (e) {}
+}
+
+function requestShortLinkJsonp(longUrl) {
+    return new Promise((resolve, reject) => {
+        const callbackName = `__gameListShort_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+        const script = document.createElement('script');
+        let timeout = null;
+        let finished = false;
+
+        const cleanup = () => {
+            if (finished) return;
+            finished = true;
+            if (timeout) clearTimeout(timeout);
+            script.onerror = null;
+            script.onload = null;
+            if (script.parentNode) script.parentNode.removeChild(script);
+            try {
+                delete window[callbackName];
+            } catch (e) {
+                window[callbackName] = undefined;
+            }
+        };
+
+        window[callbackName] = data => {
+            if (!data || data.errorcode || typeof data.shorturl !== 'string' || !/^https:\/\/is\.gd\/[A-Za-z0-9]+$/i.test(data.shorturl)) {
+                const message = data && data.errormessage ? data.errormessage : 'Сервис не вернул короткую ссылку';
+                cleanup();
+                reject(new Error(message));
+                return;
+            }
+            const shortUrl = data.shorturl;
+            cleanup();
+            resolve(shortUrl);
+        };
+
+        script.onerror = () => {
+            cleanup();
+            reject(new Error('Не удалось обратиться к сервису коротких ссылок'));
+        };
+        script.src = `https://is.gd/create.php?format=json&callback=${encodeURIComponent(callbackName)}&url=${encodeURIComponent(longUrl)}`;
+        timeout = setTimeout(() => {
+            cleanup();
+            reject(new Error('Превышено время ожидания сервиса коротких ссылок'));
+        }, 12000);
+        document.head.appendChild(script);
+    });
+}
+
+async function shortenShareLink(longUrl) {
+    const cached = getCachedShortLink(longUrl);
+    if (cached) return cached;
+
+    const endpoint = `https://is.gd/create.php?format=json&url=${encodeURIComponent(longUrl)}`;
+    let shortUrl = '';
+
+    try {
+        const response = await fetch(endpoint, { method: 'GET', mode: 'cors', cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (data && typeof data.shorturl === 'string') {
+            shortUrl = data.shorturl;
+        } else {
+            throw new Error(data && data.errormessage ? data.errormessage : 'Не удалось создать короткую ссылку');
+        }
+    } catch (e) {
+        shortUrl = await requestShortLinkJsonp(longUrl);
+    }
+
+    if (!/^https:\/\/is\.gd\/[A-Za-z0-9]+$/i.test(shortUrl)) {
+        throw new Error('Сервис вернул некорректную короткую ссылку');
+    }
+
+    cacheShortLink(longUrl, shortUrl);
+    return shortUrl;
 }
 
 async function loadFromHash() {
@@ -3403,27 +3532,52 @@ copyShareBtn.addEventListener('click', async function () {
         showToast('Библиотека сжатия не загрузилась', 'error');
         return;
     }
-    await generateShareLink();
-    const link = shareLinkInput.value;
-    if (!link) {
-        showToast('Список пуст', 'error');
-        return;
+
+    copyShareBtn.disabled = true;
+    const originalText = copyShareBtn.textContent;
+    copyShareBtn.textContent = 'Сокращаю...';
+
+    try {
+        await generateShareLink();
+        const longLink = shareLinkInput.value;
+        if (!longLink) {
+            showToast('Список пуст', 'error');
+            return;
+        }
+
+        let link = longLink;
+        let isShort = false;
+
+        try {
+            link = await shortenShareLink(longLink);
+            isShort = true;
+        } catch (e) {
+            shareLinkInput.value = longLink;
+        }
+
+        shareLinkInput.value = link;
+
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(link);
+                showToast(isShort ? 'Короткая ссылка скопирована!' : 'Сервис сокращения недоступен. Скопирована полная ссылка.', isShort ? 'success' : 'info');
+                return;
+            }
+        } catch (e) {}
+
+        try {
+            shareLinkInput.select();
+            if (document.execCommand('copy')) {
+                showToast(isShort ? 'Короткая ссылка скопирована!' : 'Сервис сокращения недоступен. Скопирована полная ссылка.', isShort ? 'success' : 'info');
+                return;
+            }
+        } catch (e) {}
+
+        showToast('Не удалось скопировать ссылку', 'error');
+    } finally {
+        copyShareBtn.disabled = false;
+        copyShareBtn.textContent = originalText;
     }
-    try {
-        if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(link);
-            showToast('Ссылка скопирована!', 'success');
-            return;
-        }
-    } catch (e) {}
-    try {
-        shareLinkInput.select();
-        if (document.execCommand('copy')) {
-            showToast('Ссылка скопирована!', 'success');
-            return;
-        }
-    } catch (e) {}
-    showToast('Не удалось скопировать ссылку', 'error');
 });
 
 window.addEventListener('hashchange', loadFromHash);

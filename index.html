@@ -176,11 +176,6 @@ h1 {
     border-color: #555;
     color: var(--text);
 }
-.btn:disabled {
-    opacity: 0.65;
-    cursor: wait;
-    transform: none;
-}
 .btn-primary {
     background: var(--primary-grad);
     border: none;
@@ -444,16 +439,6 @@ h1 {
     pointer-events: none;
     transition: background 0.25s ease;
 }
-.suggestion-item:hover {
-    background: rgba(35, 35, 43, 0.18);
-}
-.suggestion-item:hover .suggestion-bg {
-    opacity: 1;
-    filter: blur(22px) brightness(0.36) saturate(1.3);
-}
-.suggestion-item:hover::after {
-    background: linear-gradient(90deg, rgba(24, 24, 27, 0.58), rgba(24, 24, 27, 0.48) 55%, rgba(24, 24, 27, 0.68));
-}
 @keyframes premiumAppear {
     0% {
         opacity: 0;
@@ -469,6 +454,16 @@ h1 {
 .suggestion-item:last-child {
     border-bottom: none;
 }
+.suggestion-item:hover {
+    background: rgba(35, 35, 43, 0.18);
+}
+.suggestion-item:hover .suggestion-bg {
+    opacity: 1;
+    filter: blur(22px) brightness(0.36) saturate(1.3);
+}
+.suggestion-item:hover::after {
+    background: linear-gradient(90deg, rgba(24, 24, 27, 0.58), rgba(24, 24, 27, 0.48) 55%, rgba(24, 24, 27, 0.68));
+}
 .img-wrapper {
     position: relative;
     z-index: 2;
@@ -477,6 +472,7 @@ h1 {
     border-radius: 10px;
     background: #18181b;
     flex-shrink: 0;
+    position: relative;
     overflow: hidden;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
     display: flex;
@@ -558,9 +554,11 @@ h1 {
 .game-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
+    grid-auto-rows: 1px;
+    grid-auto-flow: row dense;
+    column-gap: 16px;
+    row-gap: 16px;
     align-items: start;
-    grid-auto-rows: max-content;
 }
 @keyframes cardAppear {
     from { opacity: 0; transform: translateY(20px); }
@@ -1401,7 +1399,7 @@ body.is-moving .game-card.moving .edit-btn {
 body.share-busy {
     cursor: progress;
 }
-body.share-busy .btn:not(#copyShareBtn),
+body.share-busy .btn,
 body.share-busy .clear-btn,
 body.share-busy .action-btn,
 body.share-busy .rating-btn,
@@ -1412,15 +1410,12 @@ body.share-busy input,
 body.share-busy textarea {
     cursor: wait !important;
 }
-body.share-busy .btn:not(#copyShareBtn),
+body.share-busy .btn,
 body.share-busy .clear-btn,
 body.share-busy .action-btn,
 body.share-busy .rating-btn,
 body.share-busy .tag-chip {
-    opacity: 0.5;
-}
-body.share-busy .game-card {
-    cursor: wait !important;
+    opacity: 0.55;
 }
 
 @media (hover: none) {
@@ -1483,8 +1478,9 @@ body.share-busy .game-card {
             <span class="logo-text">GameList</span>
         </h1>
         <div class="share-bar">
-            <input type="text" id="shareLinkInput" placeholder="Поделиться списком" readonly tabindex="-1">
-            <button class="btn btn-primary" id="copyShareBtn" type="button">Копировать</button>
+            <input type="text" id="shareLinkInput" placeholder="Полная ссылка для копирования" readonly tabindex="-1">
+            <button class="btn" id="copyShareBtn" type="button">Копировать</button>
+            <button class="btn btn-primary" id="shortenShareBtn" type="button">Сократить</button>
             <button class="clear-btn" id="clearAllBtn" type="button">
                 <span>Очистить</span>
             </button>
@@ -1564,6 +1560,7 @@ const gameList = document.getElementById('gameList');
 const emptyState = document.getElementById('emptyState');
 const shareLinkInput = document.getElementById('shareLinkInput');
 const copyShareBtn = document.getElementById('copyShareBtn');
+const shortenShareBtn = document.getElementById('shortenShareBtn');
 const clearAllBtn = document.getElementById('clearAllBtn');
 const toastContainer = document.getElementById('toastContainer');
 const editModal = document.getElementById('editModal');
@@ -1586,6 +1583,13 @@ let isNewGameModal = false;
 let shareGenToken = 0;
 let isShorteningShareLink = false;
 let lastShareBusyNotice = 0;
+let cardResizeObserver = null;
+
+if (typeof ResizeObserver !== 'undefined') {
+    cardResizeObserver = new ResizeObserver(entries => {
+        entries.forEach(entry => updateMasonryCard(entry.target));
+    });
+}
 
 let isDragging = false;
 let hasDragged = false;
@@ -2351,9 +2355,32 @@ function checkScroll() {
     }
 }
 
+function updateMasonryCard(card) {
+    if (!card || !card.isConnected) return;
+    const gridStyle = getComputedStyle(gameList);
+    const rowHeight = parseFloat(gridStyle.gridAutoRows) || 1;
+    const rowGap = parseFloat(gridStyle.rowGap) || 16;
+    const cardHeight = card.offsetHeight;
+    const rowSpan = Math.max(1, Math.ceil((cardHeight + rowGap) / (rowHeight + rowGap)));
+    card.style.gridRowEnd = `span ${rowSpan}`;
+}
+
+function updateMasonryLayout() {
+    Array.from(gameList.children).forEach(updateMasonryCard);
+}
+
+function observeGameCards() {
+    if (cardResizeObserver) {
+        cardResizeObserver.disconnect();
+        gameList.querySelectorAll('.game-card').forEach(card => cardResizeObserver.observe(card));
+    }
+    requestAnimationFrame(updateMasonryLayout);
+}
+
 function renderGames() {
     hideLoader();
     clearAllBtn.disabled = games.length === 0;
+    if (cardResizeObserver) cardResizeObserver.disconnect();
     if (games.length === 0) {
         gameList.innerHTML = '';
         emptyState.style.display = 'block';
@@ -2427,6 +2454,7 @@ function renderGames() {
             </div>
         `;
     }).join('');
+    observeGameCards();
 }
 
 function renderEditModal() {
@@ -2753,142 +2781,6 @@ async function generateShareLink() {
     }
 }
 
-function getCachedShortLink(longUrl) {
-    try {
-        const cached = JSON.parse(localStorage.getItem(SHORT_LINK_CACHE_KEY) || 'null');
-        const valid = cached && cached.longUrl === longUrl && typeof cached.shortUrl === 'string' && /^https:\/\/(?:(?:is|v)\.gd|4lin\.uk)\/[A-Za-z0-9]+$/i.test(cached.shortUrl);
-        return valid ? cached.shortUrl : '';
-    } catch (e) {
-        return '';
-    }
-}
-
-function cacheShortLink(longUrl, shortUrl) {
-    try {
-        localStorage.setItem(SHORT_LINK_CACHE_KEY, JSON.stringify({ longUrl, shortUrl }));
-    } catch (e) {}
-}
-
-function requestShortLinkJsonp(longUrl, host) {
-    return new Promise((resolve, reject) => {
-        const callbackName = `__gameListShort_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
-        const script = document.createElement('script');
-        let finished = false;
-        const cleanup = () => {
-            if (finished) return;
-            finished = true;
-            clearTimeout(timeout);
-            script.onerror = null;
-            if (script.parentNode) script.parentNode.removeChild(script);
-            try {
-                delete window[callbackName];
-            } catch (e) {
-                window[callbackName] = undefined;
-            }
-        };
-        const timeout = setTimeout(() => {
-            cleanup();
-            reject(new Error(`${host}: превышено время ожидания`));
-        }, 5000);
-        window[callbackName] = data => {
-            const shortUrl = data && data.shorturl;
-            if (data && data.errorcode || typeof shortUrl !== 'string' || !/^https:\/\/(?:is\.gd|v\.gd)\/[A-Za-z0-9]+$/i.test(shortUrl)) {
-                const message = data && data.errormessage ? data.errormessage : 'Некорректный ответ сервиса';
-                cleanup();
-                reject(new Error(`${host}: ${message}`));
-                return;
-            }
-            cleanup();
-            resolve(shortUrl);
-        };
-        script.onerror = () => {
-            cleanup();
-            reject(new Error(`${host}: соединение не установлено`));
-        };
-        script.src = `https://${host}/create.php?format=json&callback=${encodeURIComponent(callbackName)}&url=${encodeURIComponent(longUrl)}`;
-        document.head.appendChild(script);
-    });
-}
-
-async function requestShortLink4Lin(longUrl) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    try {
-        const endpoint = `https://4lin.uk/api.php?action=shorten&url=${encodeURIComponent(longUrl)}`;
-        const response = await fetch(endpoint, { method: 'GET', mode: 'cors', cache: 'no-store', signal: controller.signal });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        if (!data || data.success !== true || typeof data.short_url !== 'string' || !/^https:\/\/4lin\.uk\/[A-Za-z0-9]+$/i.test(data.short_url)) {
-            throw new Error(data && data.message ? data.message : 'Некорректный ответ сервиса');
-        }
-        return data.short_url;
-    } catch (e) {
-        if (e.name === 'AbortError') throw new Error('4lin.uk: превышено время ожидания');
-        throw new Error(`4lin.uk: ${e.message || 'соединение не установлено'}`);
-    } finally {
-        clearTimeout(timeout);
-    }
-}
-
-async function shortenShareLink(longUrl) {
-    const cached = getCachedShortLink(longUrl);
-    if (cached) return cached;
-
-    const providers = [
-        () => requestShortLinkJsonp(longUrl, 'v.gd'),
-        () => requestShortLinkJsonp(longUrl, 'is.gd'),
-        () => requestShortLink4Lin(longUrl)
-    ];
-    const errors = [];
-
-    for (const provider of providers) {
-        try {
-            const shortUrl = await provider();
-            cacheShortLink(longUrl, shortUrl);
-            return shortUrl;
-        } catch (e) {
-            errors.push(e.message || 'Неизвестная ошибка');
-        }
-    }
-
-    throw new Error(errors.join(' | '));
-}
-
-function setShareBusy(active) {
-    isShorteningShareLink = active;
-    document.body.classList.toggle('share-busy', active);
-    copyShareBtn.setAttribute('aria-busy', active ? 'true' : 'false');
-    if (active) {
-        cancelMoving();
-        cancelClearHold();
-        cancelDeleteHold();
-    }
-}
-
-function showShareBusyNotice() {
-    const now = Date.now();
-    if (now - lastShareBusyNotice < 900) return;
-    lastShareBusyNotice = now;
-    showToast('Идёт сокращение ссылки. Дождитесь завершения.', 'info');
-}
-
-function blockInteractionWhileShortening(e) {
-    if (!isShorteningShareLink) return;
-    if (e.type === 'keydown') {
-        const key = String(e.key || '').toLowerCase();
-        if (['escape', 'tab', 'f5', 'f12', 'control', 'shift', 'alt', 'meta'].includes(key)) return;
-        if ((e.ctrlKey || e.metaKey) && ['r', 'w', 't', 'l', 'n'].includes(key)) return;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-    showShareBusyNotice();
-}
-
-['click', 'dblclick', 'pointerdown', 'pointerup', 'pointermove', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'keydown', 'beforeinput', 'input', 'change', 'paste', 'cut', 'drop', 'dragstart', 'submit', 'contextmenu'].forEach(type => {
-    document.addEventListener(type, blockInteractionWhileShortening, true);
-});
-
 async function loadFromHash() {
     const hash = window.location.hash;
     const isR = hash.startsWith('#r=');
@@ -3044,6 +2936,7 @@ function swapCards(a, b) {
             const moveBtn = card.querySelector('.move-btn');
             if (moveBtn) moveBtn.dataset.index = idx;
         });
+        requestAnimationFrame(updateMasonryLayout);
     }
 }
 
@@ -3578,6 +3471,7 @@ lightbox.addEventListener('click', function(e) {
 });
 
 window.addEventListener('resize', function() {
+    requestAnimationFrame(updateMasonryLayout);
     if (!lightbox.classList.contains('active') || isTransitioning) return;
     const fit = computeLightboxFit(lightboxImgFront.naturalWidth, lightboxImgFront.naturalHeight);
     lightboxCard.style.width = `${fit.w}px`;
@@ -3603,6 +3497,156 @@ document.addEventListener('error', function(e) {
     el.classList.add('loaded');
 }, true);
 
+function getCachedShortLink(longUrl) {
+    try {
+        const cached = JSON.parse(localStorage.getItem(SHORT_LINK_CACHE_KEY) || 'null');
+        const valid = cached && cached.longUrl === longUrl && typeof cached.shortUrl === 'string' && /^https:\/\/(?:(?:is|v)\.gd|4lin\.uk)\/[A-Za-z0-9]+$/i.test(cached.shortUrl);
+        return valid ? cached.shortUrl : '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function cacheShortLink(longUrl, shortUrl) {
+    try {
+        localStorage.setItem(SHORT_LINK_CACHE_KEY, JSON.stringify({ longUrl, shortUrl }));
+    } catch (e) {}
+}
+
+async function requestShortLink4Lin(longUrl) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+        const endpoint = `https://4lin.uk/api.php?action=shorten&url=${encodeURIComponent(longUrl)}`;
+        const response = await fetch(endpoint, { method: 'GET', mode: 'cors', cache: 'no-store', signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (!data || data.success !== true || typeof data.short_url !== 'string' || !/^https:\/\/4lin\.uk\/[A-Za-z0-9]+$/i.test(data.short_url)) {
+            throw new Error(data && (data.message || data.error) ? data.message || data.error : 'Некорректный ответ сервиса');
+        }
+        return data.short_url;
+    } catch (e) {
+        if (e.name === 'AbortError') throw new Error('4lin.uk: превышено время ожидания');
+        throw new Error(`4lin.uk: ${e.message || 'соединение не установлено'}`);
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+function requestShortLinkJsonp(longUrl, host) {
+    return new Promise((resolve, reject) => {
+        const callbackName = `__gameListShort_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+        const script = document.createElement('script');
+        let finished = false;
+        let timeout = null;
+        const cleanup = () => {
+            if (finished) return;
+            finished = true;
+            if (timeout) clearTimeout(timeout);
+            script.onerror = null;
+            if (script.parentNode) script.parentNode.removeChild(script);
+            try {
+                delete window[callbackName];
+            } catch (e) {
+                window[callbackName] = undefined;
+            }
+        };
+        timeout = setTimeout(() => {
+            cleanup();
+            reject(new Error(`${host}: превышено время ожидания`));
+        }, 5000);
+        window[callbackName] = data => {
+            const shortUrl = data && data.shorturl;
+            if (!data || data.errorcode || typeof shortUrl !== 'string' || !new RegExp(`^https:\/\/${host.replace('.', '\\.')}\/[A-Za-z0-9]+$`, 'i').test(shortUrl)) {
+                const message = data && data.errormessage ? data.errormessage : 'Некорректный ответ сервиса';
+                cleanup();
+                reject(new Error(`${host}: ${message}`));
+                return;
+            }
+            cleanup();
+            resolve(shortUrl);
+        };
+        script.onerror = () => {
+            cleanup();
+            reject(new Error(`${host}: соединение не установлено`));
+        };
+        script.src = `https://${host}/create.php?format=json&callback=${encodeURIComponent(callbackName)}&url=${encodeURIComponent(longUrl)}`;
+        document.head.appendChild(script);
+    });
+}
+
+async function shortenShareLink(longUrl) {
+    const cached = getCachedShortLink(longUrl);
+    if (cached) return cached;
+    const providers = [
+        () => requestShortLink4Lin(longUrl),
+        () => requestShortLinkJsonp(longUrl, 'v.gd'),
+        () => requestShortLinkJsonp(longUrl, 'is.gd')
+    ];
+    const errors = [];
+    for (const provider of providers) {
+        try {
+            const shortUrl = await provider();
+            cacheShortLink(longUrl, shortUrl);
+            return shortUrl;
+        } catch (e) {
+            errors.push(e.message || 'Неизвестная ошибка');
+        }
+    }
+    throw new Error(errors.join(' | '));
+}
+
+async function copyShareText(value) {
+    shareLinkInput.value = value;
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(value);
+            return true;
+        }
+    } catch (e) {}
+    try {
+        shareLinkInput.select();
+        const copied = document.execCommand('copy');
+        window.getSelection()?.removeAllRanges();
+        return copied;
+    } catch (e) {
+        return false;
+    }
+}
+
+function setShareBusy(active) {
+    isShorteningShareLink = active;
+    document.body.classList.toggle('share-busy', active);
+    shortenShareBtn.setAttribute('aria-busy', active ? 'true' : 'false');
+    if (active) {
+        cancelMoving();
+        cancelClearHold();
+        cancelDeleteHold();
+    }
+}
+
+function showShareBusyNotice() {
+    const now = Date.now();
+    if (now - lastShareBusyNotice < 900) return;
+    lastShareBusyNotice = now;
+    showToast('Идёт сокращение ссылки. Дождитесь завершения.', 'info');
+}
+
+function blockInteractionWhileShortening(e) {
+    if (!isShorteningShareLink) return;
+    const target = e.target instanceof Element ? e.target : null;
+    const actionable = target && target.closest('button, input, textarea, select, a, .tag-chip, .game-card, .suggestion-item, .modal-bg, .lightbox, .backtop');
+    if (!actionable) return;
+    if (e.type === 'click' || e.type === 'pointerdown') showShareBusyNotice();
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+}
+
+['click', 'pointerdown', 'keydown', 'beforeinput', 'input', 'change', 'paste', 'cut', 'drop', 'dragstart', 'submit', 'contextmenu'].forEach(type => {
+    document.addEventListener(type, blockInteractionWhileShortening, true);
+});
+
 copyShareBtn.addEventListener('click', async function () {
     if (isShorteningShareLink) {
         showShareBusyNotice();
@@ -3612,59 +3656,49 @@ copyShareBtn.addEventListener('click', async function () {
         showToast('Библиотека сжатия не загрузилась', 'error');
         return;
     }
+    await generateShareLink();
+    const fullLink = shareLinkInput.value;
+    if (!fullLink) {
+        showToast('Список пуст', 'error');
+        return;
+    }
+    const copied = await copyShareText(fullLink);
+    showToast(copied ? 'Полная ссылка скопирована!' : 'Не удалось скопировать ссылку', copied ? 'success' : 'error');
+});
 
-    const originalText = copyShareBtn.textContent;
+shortenShareBtn.addEventListener('click', async function () {
+    if (isShorteningShareLink) {
+        showShareBusyNotice();
+        return;
+    }
+    if (typeof LZString === 'undefined' && typeof CompressionStream === 'undefined') {
+        showToast('Библиотека сжатия не загрузилась', 'error');
+        return;
+    }
+    const originalText = shortenShareBtn.textContent;
     setShareBusy(true);
-    copyShareBtn.textContent = 'Подготовка...';
-
+    shortenShareBtn.textContent = 'Сокращаю...';
     try {
         await generateShareLink();
-        const longLink = shareLinkInput.value;
-        if (!longLink) {
+        const fullLink = shareLinkInput.value;
+        if (!fullLink) {
             showToast('Список пуст', 'error');
             return;
         }
-
-        let link = longLink;
-        let isShort = false;
-        copyShareBtn.textContent = 'Сокращаю...';
-
-        try {
-            link = await shortenShareLink(longLink);
-            isShort = true;
-        } catch (e) {
-            shareLinkInput.value = longLink;
-            console.warn('Short link providers unavailable:', e);
-        }
-
-        shareLinkInput.value = link;
-
-        let copied = false;
-        try {
-            if (navigator.clipboard && window.isSecureContext) {
-                await navigator.clipboard.writeText(link);
-                copied = true;
-            }
-        } catch (e) {}
-
-        if (!copied) {
-            try {
-                shareLinkInput.select();
-                copied = document.execCommand('copy');
-                window.getSelection()?.removeAllRanges();
-            } catch (e) {}
-        }
-
-        if (!copied) {
-            showToast('Не удалось скопировать ссылку', 'error');
-        } else if (isShort) {
+        const shortLink = await shortenShareLink(fullLink);
+        const copied = await copyShareText(shortLink);
+        if (copied) {
             showToast('Короткая ссылка скопирована!', 'success');
         } else {
-            showToast('Сервисы сокращения недоступны. Скопирована полная ссылка.', 'info');
+            showToast('Короткая ссылка создана и оставлена в поле. Скопируйте её вручную.', 'success');
         }
+    } catch (e) {
+        console.warn('Short link providers unavailable:', e);
+        await generateShareLink();
+        showToast('Не удалось сократить ссылку. Полная ссылка сохранена в поле.', 'error');
     } finally {
         setShareBusy(false);
-        copyShareBtn.textContent = originalText;
+        shortenShareBtn.textContent = originalText;
     }
 });
 

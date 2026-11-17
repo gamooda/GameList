@@ -557,7 +557,6 @@ body.is-moving .game-card:not(.moving):hover {
     transform: scale(0.98);
     box-shadow: none;
     z-index: 0;
-    pointer-events: none;
 }
 .game-card.drop-target {
     border-color: var(--success) !important;
@@ -598,9 +597,16 @@ body.is-moving .game-card:not(.moving):hover {
     background: var(--primary);
     border-color: var(--primary);
 }
-.game-card.moving .card-actions {
+body.is-moving .card-actions {
     opacity: 0 !important;
     pointer-events: none !important;
+}
+body.is-moving .game-card.moving .card-actions {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+body.is-moving .game-card.moving .edit-btn {
+    display: none;
 }
 
 .card-bg {
@@ -2912,8 +2918,12 @@ gameList.addEventListener('click', function (e) {
     const moveBtn = target.closest('.move-btn');
     if (moveBtn) {
         e.stopPropagation();
-        cancelMoving();
         const card = moveBtn.closest('.game-card');
+        if (card && movingCard === card) {
+            cancelMoving();
+            return;
+        }
+        cancelMoving();
         if (card) {
             movingCard = card;
             movingCard.classList.add('moving');

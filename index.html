@@ -559,7 +559,8 @@ h1 {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
-    align-items: stretch;
+    align-items: start;
+    grid-auto-rows: max-content;
 }
 @keyframes cardAppear {
     from { opacity: 0; transform: translateY(20px); }
@@ -577,7 +578,8 @@ h1 {
     transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
     z-index: 1;
     animation: cardAppear 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-    height: 100%;
+    height: auto;
+    align-self: start;
 }
 .game-card:hover {
     border-color: var(--border-light);
@@ -1396,6 +1398,31 @@ body.is-moving .game-card.moving .edit-btn {
     to { transform: rotate(360deg); }
 }
 
+body.share-busy {
+    cursor: progress;
+}
+body.share-busy .btn:not(#copyShareBtn),
+body.share-busy .clear-btn,
+body.share-busy .action-btn,
+body.share-busy .rating-btn,
+body.share-busy .tag-chip,
+body.share-busy .game-cover,
+body.share-busy .suggestion-item,
+body.share-busy input,
+body.share-busy textarea {
+    cursor: wait !important;
+}
+body.share-busy .btn:not(#copyShareBtn),
+body.share-busy .clear-btn,
+body.share-busy .action-btn,
+body.share-busy .rating-btn,
+body.share-busy .tag-chip {
+    opacity: 0.5;
+}
+body.share-busy .game-card {
+    cursor: wait !important;
+}
+
 @media (hover: none) {
     .card-actions {
         opacity: 1;
@@ -1469,7 +1496,7 @@ body.is-moving .game-card.moving .edit-btn {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </div>
         <input type="text" class="search-input" id="searchInput" placeholder="Поиск игр..." autocomplete="off" aria-label="Поиск игр">
-
+        
         <div class="suggestions-wrapper" id="suggestionsWrapper">
             <div class="suggestions-scroll" id="suggestionsScroll"></div>
             <div class="fade-overlay hidden" id="fadeOverlay"></div>
@@ -1557,6 +1584,8 @@ let editingDraft = null;
 let loaderTimer = null;
 let isNewGameModal = false;
 let shareGenToken = 0;
+let isShorteningShareLink = false;
+let lastShareBusyNotice = 0;
 
 let isDragging = false;
 let hasDragged = false;
@@ -1824,31 +1853,31 @@ function packGamesCompactV2(list) {
         if (Number.isFinite(aid) && Number.isFinite(bid)) return aid - bid;
         return String(a.id).localeCompare(String(b.id));
     });
-
+    
     const out = [];
     out.push(2);
     writeVarint(out, sorted.length);
-
+    
     let prevId = 0;
     const encoder = new TextEncoder();
-
+    
     for (const g of sorted) {
         const rating = Math.max(0, Math.min(10, Math.round(g.userRating) || 0));
         const minutes = Math.round((g.userPlaytime || 0) * 60);
         const tags = g.tags || [];
         const notes = g.notes || '';
         const custom = tags.filter(t => !PRESET_TAGS.includes(t));
-
+        
         let mask = 0;
         PRESET_TAGS.forEach((t, i) => {
             if (tags.includes(t)) mask |= (1 << i);
         });
-
+        
         const hasPreset = mask !== 0;
         const hasCustom = custom.length > 0;
         const hasPlaytime = minutes > 0;
         const hasNotes = notes.length > 0;
-
+        
         out.push(
             (rating & 0x0f) |
             (hasPreset ? 0x10 : 0) |
@@ -1856,7 +1885,7 @@ function packGamesCompactV2(list) {
             (hasPlaytime ? 0x40 : 0) |
             (hasNotes ? 0x80 : 0)
         );
-
+        
         const idNum = Number(g.id);
         if (Number.isSafeInteger(idNum) && idNum > 0) {
             writeVarint(out, idNum - prevId + 1);
@@ -1867,13 +1896,13 @@ function packGamesCompactV2(list) {
             writeVarint(out, b.length);
             for (const x of b) out.push(x);
         }
-
+        
         if (hasPlaytime) writeVarint(out, minutes);
-
+        
         if (hasPreset) {
             out.push(mask & 0xff, (mask >> 8) & 0xff);
         }
-
+        
         if (hasCustom) {
             writeVarint(out, custom.length);
             for (const t of custom) {
@@ -1882,29 +1911,29 @@ function packGamesCompactV2(list) {
                 for (const x of b) out.push(x);
             }
         }
-
+        
         if (hasNotes) {
             const b = encoder.encode(notes);
             writeVarint(out, b.length);
             for (const x of b) out.push(x);
         }
     }
-
+    
     return new Uint8Array(out);
 }
 
 function unpackGamesCompactV2(bytes) {
     const reader = createReader(bytes);
     const decoder = new TextDecoder();
-
+    
     if (reader.byte() !== 2) throw new Error('Unsupported format V2');
-
+    
     const count = reader.varint();
     if (count > 1000) throw new Error('Too many games');
-
+    
     const entries = [];
     let prevId = 0;
-
+    
     for (let i = 0; i < count; i++) {
         const header = reader.byte();
         const rating = header & 0x0f;
@@ -1912,7 +1941,7 @@ function unpackGamesCompactV2(bytes) {
         const hasCustom = (header & 0x20) !== 0;
         const hasPlaytime = (header & 0x40) !== 0;
         const hasNotes = (header & 0x80) !== 0;
-
+        
         const delta = reader.varint();
         let id;
         if (delta === 0) {
@@ -1923,10 +1952,10 @@ function unpackGamesCompactV2(bytes) {
             id = prevId + delta - 1;
             prevId = id;
         }
-
+        
         let minutes = 0;
         if (hasPlaytime) minutes = reader.varint();
-
+        
         let tags = [];
         if (hasPreset) {
             const mask = reader.byte() | (reader.byte() << 8);
@@ -1943,14 +1972,14 @@ function unpackGamesCompactV2(bytes) {
                 tags.push(decoder.decode(reader.bytes(len)));
             }
         }
-
+        
         let notes = '';
         if (hasNotes) {
             const len = reader.varint();
             if (len > 8000) throw new Error('Notes too long');
             notes = decoder.decode(reader.bytes(len));
         }
-
+        
         entries.push({
             i: id,
             r: rating,
@@ -1959,7 +1988,7 @@ function unpackGamesCompactV2(bytes) {
             n: notes
         });
     }
-
+    
     return entries;
 }
 
@@ -1967,26 +1996,26 @@ function packGamesCompactV3(list) {
     const out = [];
     out.push(0x47, 0x4C, 0x33);
     writeVarint(out, list.length);
-
+    
     const encoder = new TextEncoder();
-
+    
     for (const g of list) {
         const rating = Math.max(0, Math.min(10, Math.round(g.userRating) || 0));
         const minutes = Math.round((g.userPlaytime || 0) * 60);
         const tags = g.tags || [];
         const notes = g.notes || '';
         const custom = tags.filter(t => !PRESET_TAGS.includes(t));
-
+        
         let mask = 0;
         PRESET_TAGS.forEach((t, i) => {
             if (tags.includes(t)) mask |= (1 << i);
         });
-
+        
         const hasPreset = mask !== 0;
         const hasCustom = custom.length > 0;
         const hasPlaytime = minutes > 0;
         const hasNotes = notes.length > 0;
-
+        
         out.push(
             (rating & 0x0f) |
             (hasPreset ? 0x10 : 0) |
@@ -1994,7 +2023,7 @@ function packGamesCompactV3(list) {
             (hasPlaytime ? 0x40 : 0) |
             (hasNotes ? 0x80 : 0)
         );
-
+        
         const idNum = Number(g.id);
         if (Number.isSafeInteger(idNum) && idNum > 0) {
             writeVarint(out, idNum);
@@ -2004,13 +2033,13 @@ function packGamesCompactV3(list) {
             writeVarint(out, b.length);
             for (const x of b) out.push(x);
         }
-
+        
         if (hasPlaytime) writeVarint(out, minutes);
-
+        
         if (hasPreset) {
             out.push(mask & 0xff, (mask >> 8) & 0xff);
         }
-
+        
         if (hasCustom) {
             writeVarint(out, custom.length);
             for (const t of custom) {
@@ -2019,30 +2048,30 @@ function packGamesCompactV3(list) {
                 for (const x of b) out.push(x);
             }
         }
-
+        
         if (hasNotes) {
             const b = encoder.encode(notes);
             writeVarint(out, b.length);
             for (const x of b) out.push(x);
         }
     }
-
+    
     return new Uint8Array(out);
 }
 
 function unpackGamesCompactV3(bytes) {
     const reader = createReader(bytes);
     const decoder = new TextDecoder();
-
+    
     if (reader.byte() !== 0x47 || reader.byte() !== 0x4C || reader.byte() !== 0x33) {
         throw new Error('Unsupported format V3');
     }
-
+    
     const count = reader.varint();
     if (count > 1000) throw new Error('Too many games');
-
+    
     const entries = [];
-
+    
     for (let i = 0; i < count; i++) {
         const header = reader.byte();
         const rating = header & 0x0f;
@@ -2050,7 +2079,7 @@ function unpackGamesCompactV3(bytes) {
         const hasCustom = (header & 0x20) !== 0;
         const hasPlaytime = (header & 0x40) !== 0;
         const hasNotes = (header & 0x80) !== 0;
-
+        
         const idNum = reader.varint();
         let id;
         if (idNum === 0) {
@@ -2060,10 +2089,10 @@ function unpackGamesCompactV3(bytes) {
         } else {
             id = idNum;
         }
-
+        
         let minutes = 0;
         if (hasPlaytime) minutes = reader.varint();
-
+        
         let tags = [];
         if (hasPreset) {
             const mask = reader.byte() | (reader.byte() << 8);
@@ -2080,14 +2109,14 @@ function unpackGamesCompactV3(bytes) {
                 tags.push(decoder.decode(reader.bytes(len)));
             }
         }
-
+        
         let notes = '';
         if (hasNotes) {
             const len = reader.varint();
             if (len > 8000) throw new Error('Notes too long');
             notes = decoder.decode(reader.bytes(len));
         }
-
+        
         entries.push({
             i: id,
             r: rating,
@@ -2096,7 +2125,7 @@ function unpackGamesCompactV3(bytes) {
             n: notes
         });
     }
-
+    
     return entries;
 }
 
@@ -2370,7 +2399,7 @@ function renderGames() {
                 <div class="card-content">
                     <img class="game-cover" src="${escapeHtml(coverSrc)}" alt="${escapeHtml(game.name)}" loading="lazy" data-index="${index}" draggable="false">
                     <div class="game-title">${escapeHtml(game.name)}</div>
-
+                    
                     <div class="meta-row">
                         <div class="meta-left">
                             <span class="badge">
@@ -2391,7 +2420,7 @@ function renderGames() {
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="game-tags-view">${tagsHtml}</div>
                     ${notesPreview}
                 </div>
@@ -2479,9 +2508,9 @@ function renderEditModal() {
                     </div>
                 </div>
             </div>
-
+            
             <textarea class="game-notes" id="modalNotesInput" rows="3" maxlength="2000" placeholder="Что понравилось, краткое описание...">${escapeHtml(game.notes || '')}</textarea>
-
+            
             <div class="edit-section">
                 <div class="edit-label">Теги:</div>
                 <div class="tags-picker" id="modalTagsPicker">${tagChips}</div>
@@ -2492,7 +2521,7 @@ function renderEditModal() {
                     </button>
                 </div>
             </div>
-
+            
             <div class="edit-actions">
                 <button class="action-btn btn-success" type="button" id="modalSaveBtn">Сохранить</button>
                 <button class="action-btn cancel" type="button" id="modalCancelBtn">Отмена</button>
@@ -2727,7 +2756,8 @@ async function generateShareLink() {
 function getCachedShortLink(longUrl) {
     try {
         const cached = JSON.parse(localStorage.getItem(SHORT_LINK_CACHE_KEY) || 'null');
-        return cached && cached.longUrl === longUrl && typeof cached.shortUrl === 'string' && /^https:\/\/is\.gd\/[A-Za-z0-9]+$/i.test(cached.shortUrl) ? cached.shortUrl : '';
+        const valid = cached && cached.longUrl === longUrl && typeof cached.shortUrl === 'string' && /^https:\/\/(?:(?:is|v)\.gd|4lin\.uk)\/[A-Za-z0-9]+$/i.test(cached.shortUrl);
+        return valid ? cached.shortUrl : '';
     } catch (e) {
         return '';
     }
@@ -2739,19 +2769,16 @@ function cacheShortLink(longUrl, shortUrl) {
     } catch (e) {}
 }
 
-function requestShortLinkJsonp(longUrl) {
+function requestShortLinkJsonp(longUrl, host) {
     return new Promise((resolve, reject) => {
         const callbackName = `__gameListShort_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
         const script = document.createElement('script');
-        let timeout = null;
         let finished = false;
-
         const cleanup = () => {
             if (finished) return;
             finished = true;
-            if (timeout) clearTimeout(timeout);
+            clearTimeout(timeout);
             script.onerror = null;
-            script.onload = null;
             if (script.parentNode) script.parentNode.removeChild(script);
             try {
                 delete window[callbackName];
@@ -2759,59 +2786,108 @@ function requestShortLinkJsonp(longUrl) {
                 window[callbackName] = undefined;
             }
         };
-
+        const timeout = setTimeout(() => {
+            cleanup();
+            reject(new Error(`${host}: превышено время ожидания`));
+        }, 5000);
         window[callbackName] = data => {
-            if (!data || data.errorcode || typeof data.shorturl !== 'string' || !/^https:\/\/is\.gd\/[A-Za-z0-9]+$/i.test(data.shorturl)) {
-                const message = data && data.errormessage ? data.errormessage : 'Сервис не вернул короткую ссылку';
+            const shortUrl = data && data.shorturl;
+            if (data && data.errorcode || typeof shortUrl !== 'string' || !/^https:\/\/(?:is\.gd|v\.gd)\/[A-Za-z0-9]+$/i.test(shortUrl)) {
+                const message = data && data.errormessage ? data.errormessage : 'Некорректный ответ сервиса';
                 cleanup();
-                reject(new Error(message));
+                reject(new Error(`${host}: ${message}`));
                 return;
             }
-            const shortUrl = data.shorturl;
             cleanup();
             resolve(shortUrl);
         };
-
         script.onerror = () => {
             cleanup();
-            reject(new Error('Не удалось обратиться к сервису коротких ссылок'));
+            reject(new Error(`${host}: соединение не установлено`));
         };
-        script.src = `https://is.gd/create.php?format=json&callback=${encodeURIComponent(callbackName)}&url=${encodeURIComponent(longUrl)}`;
-        timeout = setTimeout(() => {
-            cleanup();
-            reject(new Error('Превышено время ожидания сервиса коротких ссылок'));
-        }, 12000);
+        script.src = `https://${host}/create.php?format=json&callback=${encodeURIComponent(callbackName)}&url=${encodeURIComponent(longUrl)}`;
         document.head.appendChild(script);
     });
+}
+
+async function requestShortLink4Lin(longUrl) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+        const endpoint = `https://4lin.uk/api.php?action=shorten&url=${encodeURIComponent(longUrl)}`;
+        const response = await fetch(endpoint, { method: 'GET', mode: 'cors', cache: 'no-store', signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (!data || data.success !== true || typeof data.short_url !== 'string' || !/^https:\/\/4lin\.uk\/[A-Za-z0-9]+$/i.test(data.short_url)) {
+            throw new Error(data && data.message ? data.message : 'Некорректный ответ сервиса');
+        }
+        return data.short_url;
+    } catch (e) {
+        if (e.name === 'AbortError') throw new Error('4lin.uk: превышено время ожидания');
+        throw new Error(`4lin.uk: ${e.message || 'соединение не установлено'}`);
+    } finally {
+        clearTimeout(timeout);
+    }
 }
 
 async function shortenShareLink(longUrl) {
     const cached = getCachedShortLink(longUrl);
     if (cached) return cached;
 
-    const endpoint = `https://is.gd/create.php?format=json&url=${encodeURIComponent(longUrl)}`;
-    let shortUrl = '';
+    const providers = [
+        () => requestShortLinkJsonp(longUrl, 'v.gd'),
+        () => requestShortLinkJsonp(longUrl, 'is.gd'),
+        () => requestShortLink4Lin(longUrl)
+    ];
+    const errors = [];
 
-    try {
-        const response = await fetch(endpoint, { method: 'GET', mode: 'cors', cache: 'no-store' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        if (data && typeof data.shorturl === 'string') {
-            shortUrl = data.shorturl;
-        } else {
-            throw new Error(data && data.errormessage ? data.errormessage : 'Не удалось создать короткую ссылку');
+    for (const provider of providers) {
+        try {
+            const shortUrl = await provider();
+            cacheShortLink(longUrl, shortUrl);
+            return shortUrl;
+        } catch (e) {
+            errors.push(e.message || 'Неизвестная ошибка');
         }
-    } catch (e) {
-        shortUrl = await requestShortLinkJsonp(longUrl);
     }
 
-    if (!/^https:\/\/is\.gd\/[A-Za-z0-9]+$/i.test(shortUrl)) {
-        throw new Error('Сервис вернул некорректную короткую ссылку');
-    }
-
-    cacheShortLink(longUrl, shortUrl);
-    return shortUrl;
+    throw new Error(errors.join(' | '));
 }
+
+function setShareBusy(active) {
+    isShorteningShareLink = active;
+    document.body.classList.toggle('share-busy', active);
+    copyShareBtn.setAttribute('aria-busy', active ? 'true' : 'false');
+    if (active) {
+        cancelMoving();
+        cancelClearHold();
+        cancelDeleteHold();
+    }
+}
+
+function showShareBusyNotice() {
+    const now = Date.now();
+    if (now - lastShareBusyNotice < 900) return;
+    lastShareBusyNotice = now;
+    showToast('Идёт сокращение ссылки. Дождитесь завершения.', 'info');
+}
+
+function blockInteractionWhileShortening(e) {
+    if (!isShorteningShareLink) return;
+    if (e.type === 'keydown') {
+        const key = String(e.key || '').toLowerCase();
+        if (['escape', 'tab', 'f5', 'f12', 'control', 'shift', 'alt', 'meta'].includes(key)) return;
+        if ((e.ctrlKey || e.metaKey) && ['r', 'w', 't', 'l', 'n'].includes(key)) return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+    showShareBusyNotice();
+}
+
+['click', 'dblclick', 'pointerdown', 'pointerup', 'pointermove', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'keydown', 'beforeinput', 'input', 'change', 'paste', 'cut', 'drop', 'dragstart', 'submit', 'contextmenu'].forEach(type => {
+    document.addEventListener(type, blockInteractionWhileShortening, true);
+});
 
 async function loadFromHash() {
     const hash = window.location.hash;
@@ -3528,14 +3604,18 @@ document.addEventListener('error', function(e) {
 }, true);
 
 copyShareBtn.addEventListener('click', async function () {
+    if (isShorteningShareLink) {
+        showShareBusyNotice();
+        return;
+    }
     if (typeof LZString === 'undefined' && typeof CompressionStream === 'undefined') {
         showToast('Библиотека сжатия не загрузилась', 'error');
         return;
     }
 
-    copyShareBtn.disabled = true;
     const originalText = copyShareBtn.textContent;
-    copyShareBtn.textContent = 'Сокращаю...';
+    setShareBusy(true);
+    copyShareBtn.textContent = 'Подготовка...';
 
     try {
         await generateShareLink();
@@ -3547,35 +3627,43 @@ copyShareBtn.addEventListener('click', async function () {
 
         let link = longLink;
         let isShort = false;
+        copyShareBtn.textContent = 'Сокращаю...';
 
         try {
             link = await shortenShareLink(longLink);
             isShort = true;
         } catch (e) {
             shareLinkInput.value = longLink;
+            console.warn('Short link providers unavailable:', e);
         }
 
         shareLinkInput.value = link;
 
+        let copied = false;
         try {
             if (navigator.clipboard && window.isSecureContext) {
                 await navigator.clipboard.writeText(link);
-                showToast(isShort ? 'Короткая ссылка скопирована!' : 'Сервис сокращения недоступен. Скопирована полная ссылка.', isShort ? 'success' : 'info');
-                return;
+                copied = true;
             }
         } catch (e) {}
 
-        try {
-            shareLinkInput.select();
-            if (document.execCommand('copy')) {
-                showToast(isShort ? 'Короткая ссылка скопирована!' : 'Сервис сокращения недоступен. Скопирована полная ссылка.', isShort ? 'success' : 'info');
-                return;
-            }
-        } catch (e) {}
+        if (!copied) {
+            try {
+                shareLinkInput.select();
+                copied = document.execCommand('copy');
+                window.getSelection()?.removeAllRanges();
+            } catch (e) {}
+        }
 
-        showToast('Не удалось скопировать ссылку', 'error');
+        if (!copied) {
+            showToast('Не удалось скопировать ссылку', 'error');
+        } else if (isShort) {
+            showToast('Короткая ссылка скопирована!', 'success');
+        } else {
+            showToast('Сервисы сокращения недоступны. Скопирована полная ссылка.', 'info');
+        }
     } finally {
-        copyShareBtn.disabled = false;
+        setShareBusy(false);
         copyShareBtn.textContent = originalText;
     }
 });

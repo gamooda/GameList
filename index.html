@@ -856,8 +856,7 @@ body.is-moving .game-card.moving .edit-btn {
 .edit-header {
     display: flex;
     gap: 16px;
-    align-items: center;
-    margin-bottom: 4px;
+    align-items: flex-start;
 }
 .edit-header img {
     width: 80px;
@@ -867,6 +866,13 @@ body.is-moving .game-card.moving .edit-btn {
     background: #18181f;
     flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.edit-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
 }
 .edit-header h2 {
     font-size: 22px;
@@ -880,12 +886,11 @@ body.is-moving .game-card.moving .edit-btn {
     gap: 12px;
     flex-wrap: wrap;
     background: rgba(0, 0, 0, 0.25);
-    padding: 10px 14px;
+    padding: 8px 12px;
     border-radius: 8px;
     border: 1px solid var(--border);
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-muted);
-    margin-bottom: 4px;
 }
 .hltb-stat {
     display: flex;
@@ -898,9 +903,8 @@ body.is-moving .game-card.moving .edit-btn {
 .edit-row {
     display: flex;
     gap: 16px;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: flex-start;
-    justify-content: space-between;
 }
 .edit-section {
     display: flex;
@@ -920,7 +924,7 @@ body.is-moving .game-card.moving .edit-btn {
     color: var(--text);
     font-size: 13px;
     outline: none;
-    width: 55px;
+    width: 52px;
     text-align: center;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
@@ -934,8 +938,8 @@ body.is-moving .game-card.moving .edit-btn {
     flex-wrap: wrap;
 }
 .rating-btn {
-    width: 27px;
-    height: 27px;
+    width: 26px;
+    height: 26px;
     border-radius: 4px;
     border: 1px solid rgba(0,0,0,0.3);
     font-weight: 800;
@@ -1360,10 +1364,11 @@ body.is-moving .game-card.moving .edit-btn {
     .game-list {
         grid-template-columns: 1fr;
     }
-    .edit-row {
+    .edit-header {
         flex-direction: column;
-        align-items: flex-start;
-        flex-wrap: wrap;
+    }
+    .edit-header-info {
+        width: 100%;
     }
     .share-bar {
         justify-content: center;
@@ -2410,23 +2415,23 @@ function renderEditModal() {
         <div class="edit-container">
             <div class="edit-header">
                 <img src="${escapeHtml(headerSrc)}" alt="${escapeHtml(game.name)}">
-                <h2>${escapeHtml(game.name)}</h2>
-            </div>
-            
-            ${hltbStatsHtml}
-            
-            <div class="edit-row">
-                <div class="edit-section">
-                    <div class="edit-label">Ваша оценка:</div>
-                    <div class="rating-picker" id="modalRatingPicker">${ratingButtons}</div>
-                </div>
-                <div class="edit-section">
-                    <div class="edit-label">Время (ч / мин):</div>
-                    <div style="display:flex; gap:4px; align-items:center;">
-                        <input type="number" step="1" min="0" max="9999" inputmode="numeric" id="modalHoursInput" class="user-playtime-input" value="${hoursVal}" placeholder="0">
-                        <span style="color:var(--text-muted); font-size:12px;">ч</span>
-                        <input type="number" step="1" min="0" max="59" inputmode="numeric" id="modalMinsInput" class="user-playtime-input" value="${minsVal}" placeholder="0">
-                        <span style="color:var(--text-muted); font-size:12px;">м</span>
+                <div class="edit-header-info">
+                    <h2>${escapeHtml(game.name)}</h2>
+                    ${hltbStatsHtml}
+                    <div class="edit-row">
+                        <div class="edit-section">
+                            <div class="edit-label">Ваша оценка:</div>
+                            <div class="rating-picker" id="modalRatingPicker">${ratingButtons}</div>
+                        </div>
+                        <div class="edit-section">
+                            <div class="edit-label">Время (ч / мин):</div>
+                            <div style="display:flex; gap:4px; align-items:center;">
+                                <input type="number" step="1" min="0" max="9999" inputmode="numeric" id="modalHoursInput" class="user-playtime-input" value="${hoursVal}" placeholder="0">
+                                <span style="color:var(--text-muted); font-size:12px;">ч</span>
+                                <input type="number" step="1" min="0" max="59" inputmode="numeric" id="modalMinsInput" class="user-playtime-input" value="${minsVal}" placeholder="0">
+                                <span style="color:var(--text-muted); font-size:12px;">м</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

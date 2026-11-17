@@ -1769,6 +1769,7 @@ function packGamesCompactV2(list) {
     });
     
     const out = [];
+    out.push(2);
     writeVarint(out, sorted.length);
     
     let prevId = 0;
@@ -1835,76 +1836,12 @@ function packGamesCompactV2(list) {
     return new Uint8Array(out);
 }
 
-function packGamesCompactV3(list) {
-    const out = [];
-    out.push(3);
-    writeVarint(out, list.length);
-    
-    const encoder = new TextEncoder();
-    
-    for (const g of list) {
-        const rating = Math.max(0, Math.min(10, Math.round(g.userRating) || 0));
-        const minutes = Math.round((g.userPlaytime || 0) * 60);
-        const tags = g.tags || [];
-        const notes = g.notes || '';
-        const custom = tags.filter(t => !PRESET_TAGS.includes(t));
-        
-        let mask = 0;
-        PRESET_TAGS.forEach((t, i) => {
-            if (tags.includes(t)) mask |= (1 << i);
-        });
-        
-        const hasPreset = mask !== 0;
-        const hasCustom = custom.length > 0;
-        const hasPlaytime = minutes > 0;
-        const hasNotes = notes.length > 0;
-        
-        out.push(
-            (rating & 0x0f) |
-            (hasPreset ? 0x10 : 0) |
-            (hasCustom ? 0x20 : 0) |
-            (hasPlaytime ? 0x40 : 0) |
-            (hasNotes ? 0x80 : 0)
-        );
-        
-        const idNum = Number(g.id);
-        if (Number.isSafeInteger(idNum) && idNum > 0) {
-            writeVarint(out, idNum);
-        } else {
-            writeVarint(out, 0);
-            const b = encoder.encode(String(g.id));
-            writeVarint(out, b.length);
-            for (const x of b) out.push(x);
-        }
-        
-        if (hasPlaytime) writeVarint(out, minutes);
-        
-        if (hasPreset) {
-            out.push(mask & 0xff, (mask >> 8) & 0xff);
-        }
-        
-        if (hasCustom) {
-            writeVarint(out, custom.length);
-            for (const t of custom) {
-                const b = encoder.encode(t);
-                writeVarint(out, b.length);
-                for (const x of b) out.push(x);
-            }
-        }
-        
-        if (hasNotes) {
-            const b = encoder.encode(notes);
-            writeVarint(out, b.length);
-            for (const x of b) out.push(x);
-        }
-    }
-    
-    return new Uint8Array(out);
-}
-
 function unpackGamesCompactV2(bytes) {
     const reader = createReader(bytes);
     const decoder = new TextDecoder();
+    
+    if (reader.byte() !== 2) throw new Error('Unsupported format V2');
+    
     const count = reader.varint();
     if (count > 1000) throw new Error('Too many games');
     
@@ -1969,11 +1906,80 @@ function unpackGamesCompactV2(bytes) {
     return entries;
 }
 
+function packGamesCompactV3(list) {
+    const out = [];
+    out.push(0x47, 0x4C, 0x33);
+    writeVarint(out, list.length);
+    
+    const encoder = new TextEncoder();
+    
+    for (const g of list) {
+        const rating = Math.max(0, Math.min(10, Math.round(g.userRating) || 0));
+        const minutes = Math.round((g.userPlaytime || 0) * 60);
+        const tags = g.tags || [];
+        const notes = g.notes || '';
+        const custom = tags.filter(t => !PRESET_TAGS.includes(t));
+        
+        let mask = 0;
+        PRESET_TAGS.forEach((t, i) => {
+            if (tags.includes(t)) mask |= (1 << i);
+        });
+        
+        const hasPreset = mask !== 0;
+        const hasCustom = custom.length > 0;
+        const hasPlaytime = minutes > 0;
+        const hasNotes = notes.length > 0;
+        
+        out.push(
+            (rating & 0x0f) |
+            (hasPreset ? 0x10 : 0) |
+            (hasCustom ? 0x20 : 0) |
+            (hasPlaytime ? 0x40 : 0) |
+            (hasNotes ? 0x80 : 0)
+        );
+        
+        const idNum = Number(g.id);
+        if (Number.isSafeInteger(idNum) && idNum > 0) {
+            writeVarint(out, idNum);
+        } else {
+            writeVarint(out, 0);
+            const b = encoder.encode(String(g.id));
+            writeVarint(out, b.length);
+            for (const x of b) out.push(x);
+        }
+        
+        if (hasPlaytime) writeVarint(out, minutes);
+        
+        if (hasPreset) {
+            out.push(mask & 0xff, (mask >> 8) & 0xff);
+        }
+        
+        if (hasCustom) {
+            writeVarint(out, custom.length);
+            for (const t of custom) {
+                const b = encoder.encode(t);
+                writeVarint(out, b.length);
+                for (const x of b) out.push(x);
+            }
+        }
+        
+        if (hasNotes) {
+            const b = encoder.encode(notes);
+            writeVarint(out, b.length);
+            for (const x of b) out.push(x);
+        }
+    }
+    
+    return new Uint8Array(out);
+}
+
 function unpackGamesCompactV3(bytes) {
     const reader = createReader(bytes);
     const decoder = new TextDecoder();
     
-    if (reader.byte() !== 3) throw new Error('Unsupported format');
+    if (reader.byte() !== 0x47 || reader.byte() !== 0x4C || reader.byte() !== 0x33) {
+        throw new Error('Unsupported format V3');
+    }
     
     const count = reader.varint();
     if (count > 1000) throw new Error('Too many games');
@@ -2678,13 +2684,9 @@ async function loadFromHash() {
 
             if (isR) {
                 const bytes = base64UrlToBytes(payload);
-                try {
-                    if (bytes[0] === 3) {
-                        entries = unpackGamesCompactV3(bytes);
-                    } else {
-                        entries = unpackGamesCompactV2(bytes);
-                    }
-                } catch (err) {
+                if (bytes.length >= 3 && bytes[0] === 0x47 && bytes[1] === 0x4C && bytes[2] === 0x33) {
+                    entries = unpackGamesCompactV3(bytes);
+                } else {
                     entries = unpackGamesCompactV2(bytes);
                 }
             } else if (isC) {
@@ -2695,13 +2697,9 @@ async function loadFromHash() {
                     return;
                 }
                 const bytes = await inflateRaw(base64UrlToBytes(payload));
-                try {
-                    if (bytes[0] === 3) {
-                        entries = unpackGamesCompactV3(bytes);
-                    } else {
-                        entries = unpackGamesCompactV2(bytes);
-                    }
-                } catch (err) {
+                if (bytes.length >= 3 && bytes[0] === 0x47 && bytes[1] === 0x4C && bytes[2] === 0x33) {
+                    entries = unpackGamesCompactV3(bytes);
+                } else {
                     entries = unpackGamesCompactV2(bytes);
                 }
             } else if (isS) {
@@ -2767,6 +2765,7 @@ async function loadFromHash() {
                 }
             }
         } catch (e) {
+            console.error('Link parse error:', e);
             showToast('Не удалось прочитать ссылку', 'error');
         }
     }
